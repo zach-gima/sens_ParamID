@@ -34,6 +34,7 @@ run param/params_bounds
 
 %%% Set input/output paths & load data
 baseline = 'C'; %'B' 'C'
+data_select_logic = 1; % 1 for selecting data according to sensitivity content
 soc_0 = 'SOC60'; %SOC#
 input_folder = strcat('input-data/SPMeT/',soc_0,'/');
 % input_filename = 'US06x3_batt_ObsData.mat';
@@ -112,36 +113,40 @@ for batch_idx = 1:ID_p.num_batches
     p = update_casadi_vars(p,theta,ID_p,(1:ID_p.np)',1);
     
     %% Simulate SPMeT for initial parameter guess: voltage, sensitivity
-    % Used for event_select
-    V_sim_initial = cell(ID_p.num_events,1);
-    sens = cell(ID_p.num_events,1);
-
-    % Simulate model for Voltage, Sensitivity
-    parfor ii = 1:ID_p.num_events
-        [V_sim_initial{ii},sens{ii},~] = spmet_casadi(data(ii),theta.guess,theta.sx,p,1);
-    end
-
-    % Compute STS_norm for selecting optimal data
-    STS_norm_initial = cell(ID_p.num_events,1);
-    for ii = 1:ID_p.num_events
-        data(ii).V_sim_initial = V_sim_initial{ii};
-        data(ii).sens_initial = sens{ii};
-
-        %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
-        %%% normalize_sens_factor -- should this factor update with
-        %%% parameter updates?
-        [STS_norm_initial{ii},~,~] = compute_sens_variables(p,bounds,sens{ii});
-    end
+%     % Used for event_select
+%     V_sim_initial = cell(ID_p.num_events,1);
+%     sens = cell(ID_p.num_events,1);
+% 
+%     % Simulate model for Voltage, Sensitivity
+%     parfor ii = 1:ID_p.num_events
+%         [V_sim_initial{ii},sens{ii},~] = spmet_casadi(data(ii),theta.guess,theta.sx,p,1);
+%     end
+% 
+%     % Compute STS_norm for selecting optimal data
+%     STS_norm_initial = cell(ID_p.num_events,1);
+%     for ii = 1:ID_p.num_events
+%         data(ii).V_sim_initial = V_sim_initial{ii};
+%         data(ii).sens_initial = sens{ii};
+% 
+%         %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
+%         %%% normalize_sens_factor -- should this factor update with
+%         %%% parameter updates?
+%         [STS_norm_initial{ii},~,~] = compute_sens_variables(p,bounds,sens{ii});
+%     end
 
 %     % Debugging -- save data so don't have to regenerate every time
-%     save('debugging.mat','data','STS_norm_initial');
-%     load('debugging.mat');
+%     save('initial_sim.mat','data','STS_norm_initial');
+    load('initial_sim.mat');
 
     %% Select events
     % opt_event_idx contains the indices corresponding to events that were
     % selected for having the highest sensitivity content w.r.t. the parameters
     % of interest
-    [opt_event_idx] = event_select(ID_p,STS_norm_initial);
+    if data_select_logic == 1
+        [opt_event_idx] = event_select(ID_p,STS_norm_initial);
+    else
+        opt_event_idx = (1:ID_p.np)';
+    end
     opt_data = data(opt_event_idx); % create new struct of just the optimal data
 
     %% Compute additional sensitivity data needed for parameter collinearty + sensitivity analysis
