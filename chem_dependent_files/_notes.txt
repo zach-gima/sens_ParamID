@@ -1,0 +1,12 @@
+Will need to exchange the following files when changing chemistry-related stuff for the battery:
+
+ELYTE RELATIONSHIP DEPENDENT (e.g. valøen-reimers, capiglia, etc)
+-- electrolyteAct
+-- electrolyteCond
+-- electrolyteDe
+
+CHEMISTRY-DEPENDENT
+-- refPotentialAnode
+-- refPotentialCathode
+-- init_cs
+	-> requires inclusion of NCA_SOC_OCV_map.mat

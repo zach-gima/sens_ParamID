@@ -1,0 +1,35 @@
+Discretization Params:
+No. of FDM nodes in Anode | Separator | Cathode : 10 | 5 | 10
+No. of FDM nodes in Single Particles : 30
+ 
+
+
+
+BEGINNING PARAMETER ID ROUTINE
+Baseline C 
+Start Time: 11-Jun-2019 18:41:11 
+ 
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Batch #1 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Iter:1000, v_sim: 3.552971
+if system_dependent('IsDebugMode')==1, dbquit; end
+sens_ParamID_main
+{Error using <a href="matlab:matlab.internal.language.introspective.errorDocCallback('disp')" style="font-weight:bold">disp</a>
+Too many input arguments.
+
+Error in <a href="matlab:matlab.internal.language.introspective.errorDocCallback('load_data', '/Users/ztakeo/Documents/GitHub/sens_ParamID/load_data.m', 41)" style="font-weight:bold">load_data</a> (<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/load_data.m',41,0)">line 41</a>)
+            disp('No Rc value specified for %s profile.',input_filename)
+
+Error in <a href="matlab:matlab.internal.language.introspective.errorDocCallback('sens_ParamID_main', '/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m', 41)" style="font-weight:bold">sens_ParamID_main</a> (<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m',41,0)">line 41</a>)
+data = load_data(p,input_folder);
+} 
+sens_ParamID_main
+No Rc value specified for DC1_batt_ObsData.mat profile 
+.No Rc value specified for DC2_batt_ObsData.mat profile 
+.No Rc value specified for LA92x2_batt_ObsData.mat profile 
+.No Rc value specified for SC04x4_batt_ObsData.mat profile 
+.No Rc value specified for UDDSx2_batt_ObsData.mat profile 
+.No Rc value specified for US06x3_batt_ObsData.mat profile 
+.

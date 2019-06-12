@@ -1,0 +1,26 @@
+Discretization Params:
+No. of FDM nodes in Anode | Separator | Cathode : 10 | 5 | 10
+No. of FDM nodes in Single Particles : 30
+ 
+
+*********BEGINNING PARAMETER ID ROUTINE*********
+Baseline C 
+Start Time: 11-Jun-2019 19:26:23 
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Batch #1 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{Error using <a href="matlab:matlab.internal.language.introspective.errorDocCallback('spmet_casadi', '/Users/ztakeo/Documents/GitHub/sens_ParamID/spmet_casadi.m', 34)" style="font-weight:bold">spmet_casadi</a> (<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/spmet_casadi.m',34,0)">line 34</a>)
+Undefined function or variable 'T_amb'.
+
+Error in <a href="matlab:matlab.internal.language.introspective.errorDocCallback('sens_ParamID_main', '/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m', 120)" style="font-weight:bold">sens_ParamID_main</a> (<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m',120,0)">line 120</a>)
+    parfor ii = 1:ID_p.num_events
+} 
+opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/spmet_casadi.m',34,0)
+sens_ParamID_main
+No Rc value specified for DC1_batt_ObsData.mat profile. 
+No Rc value specified for DC2_batt_ObsData.mat profile. 
+No Rc value specified for LA92x2_batt_ObsData.mat profile. 
+No Rc value specified for SC04x4_batt_ObsData.mat profile. 
+No Rc value specified for UDDSx2_batt_ObsData.mat profile. 
+No Rc value specified for US06x3_batt_ObsData.mat profile. 

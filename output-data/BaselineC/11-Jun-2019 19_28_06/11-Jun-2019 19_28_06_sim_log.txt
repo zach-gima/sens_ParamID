@@ -1,0 +1,137 @@
+Discretization Params:
+No. of FDM nodes in Anode | Separator | Cathode : 10 | 5 | 10
+No. of FDM nodes in Single Particles : 30
+ 
+
+*********BEGINNING PARAMETER ID ROUTINE*********
+Baseline C 
+Start Time: 11-Jun-2019 19:28:06 
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Batch #1 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Iter:1000, v_sim: 3.542088
+Iter:1000, v_sim: 3.452192
+Iter:2000, v_sim: 3.358315
+Iter:3000, v_sim: 3.394496
+Iter:1000, v_sim: 3.505771
+Iter:2000, v_sim: 3.405256
+Iter:1000, v_sim: 3.551280
+Iter:2000, v_sim: 3.467038
+Iter:3000, v_sim: 3.456123
+Iter:1000, v_sim: 3.427196
+Iter:2000, v_sim: 3.547688
+Iter:3000, v_sim: 3.535810
+Iter:4000, v_sim: 3.539511
+Iter:5000, v_sim: 3.539726
+Iter:1000, v_sim: 3.628322
+Iter:2000, v_sim: 3.531750
+Iter:3000, v_sim: 3.508121
+Iter:4000, v_sim: 3.342482
+Iter:5000, v_sim: 3.387498
+Iter:6000, v_sim: 3.350276
+Starting cvx batch select
+ 
+Calling SeDuMi 1.34: 110 variables, 34 equality constraints
+   For improved efficiency, SeDuMi is solving the dual problem.
+------------------------------------------------------------
+SeDuMi 1.34 (beta) by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+Split 1 free variables
+eqs m = 34, order n = 40, dim = 178, blocks = 8
+nnz(A) = 208 + 0, nnz(ADA) = 764, nnz(L) = 408
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            1.09E+04 0.000
+  1 :  -7.04E-02 4.11E+03 0.000 0.3763 0.9000 0.9000   1.48  1  1  5.0E+02
+  2 :  -5.51E+00 8.04E+02 0.000 0.1958 0.9000 0.9000  -0.56  1  1  7.2E+02
+  3 :  -2.18E+01 1.88E+02 0.000 0.2334 0.9000 0.9000  -0.72  1  1  5.9E+02
+  4 :  -2.41E+01 8.45E+01 0.000 0.4503 0.9000 0.9000  -0.43  1  1  3.7E+02
+  5 :  -4.20E+00 4.73E+01 0.000 0.5591 0.9000 0.9000   1.47  1  1  1.4E+02
+  6 :  -2.70E-01 1.29E+01 0.000 0.2737 0.9000 0.9000   1.68  1  1  2.5E+01
+  7 :  -4.21E-02 3.37E+00 0.000 0.2606 0.9000 0.9000   1.38  1  1  5.6E+00
+  8 :   7.85E-03 8.50E-01 0.000 0.2520 0.9000 0.9000   1.20  1  1  1.3E+00
+  9 :   1.44E-02 2.34E-01 0.000 0.2757 0.9000 0.9000   1.18  1  1  3.2E-01
+ 10 :   1.76E-02 5.81E-02 0.000 0.2481 0.9000 0.9000   1.12  1  1  7.5E-02
+ 11 :   2.33E-02 1.80E-02 0.000 0.3089 0.9000 0.9000   0.84  1  1  2.6E-02
+ 12 :   2.68E-02 6.26E-03 0.000 0.3488 0.9000 0.9000   0.56  1  1  1.2E-02
+ 13 :   2.81E-02 2.44E-03 0.000 0.3894 0.9000 0.9000   0.44  1  1  6.5E-03
+ 14 :   2.83E-02 1.06E-03 0.000 0.4363 0.9000 0.9000   0.37  1  1  3.9E-03
+ 15 :   2.82E-02 4.48E-04 0.000 0.4207 0.9000 0.9000   0.36  1  1  2.2E-03
+ 16 :   2.72E-02 2.57E-04 0.000 0.5742 0.9000 0.9000   0.36  1  2  1.6E-03
+ 17 :   2.58E-02 1.18E-04 0.000 0.4575 0.9000 0.9000   0.44  2  2  9.4E-04
+ 18 :   2.58E-02 6.45E-05 0.000 0.5490 0.9000 0.0000   0.40  2  2  7.0E-04
+ 19 :   2.40E-02 1.74E-05 0.000 0.2702 0.9149 0.9000   0.28  2  2  2.8E-04
+ 20 :   2.40E-02 7.74E-06 0.000 0.4439 0.9000 0.0000   0.08  2  2  2.0E-04
+ 21 :   2.18E-02 2.35E-06 0.000 0.3031 0.9110 0.9000  -0.10  2  2  9.1E-05
+ 22 :   2.01E-02 5.33E-07 0.000 0.2270 0.9183 0.9000   0.04  2  2  4.1E-05
+ 23 :   2.01E-02 2.26E-07 0.039 0.4242 0.9000 0.0000   0.13  2  3  2.8E-05
+ 24 :   1.84E-02 7.50E-08 0.000 0.3319 0.9080 0.9000   0.01  3  3  1.2E-05
+ 25 :   1.84E-02 2.78E-08 0.000 0.3701 0.9000 0.0000   0.02  3  3  8.3E-06
+ 26 :   1.69E-02 8.33E-09 0.000 0.3002 0.9166 0.9000  -0.21  3  3  4.2E-06
+ 27 :   1.60E-02 3.61E-09 0.000 0.4331 0.9150 0.9000   0.03  7  9  2.7E-06
+ 28 :   1.48E-02 2.22E-09 0.104 0.6140 0.9000 0.9321   0.01  8  8  2.2E-06
+ 29 :   1.39E-02 1.42E-09 0.000 0.6405 0.9000 0.7252   0.13 10 11  1.9E-06
+ 30 :   1.39E-02 6.43E-10 0.000 0.4533 0.9000 0.0000   0.33 11 11  1.3E-06
+ 31 :   1.29E-02 1.63E-10 0.000 0.2528 0.9200 0.9000   0.21  9 11  5.2E-07
+ 32 :   1.15E-02 6.84E-11 0.000 0.4207 0.9000 0.8152  -0.04 14 10  3.8E-07
+ 33 :   1.07E-02 1.65E-11 0.000 0.2414 0.9160 0.9000   0.28 13 14  1.7E-07
+ 34 :   1.07E-02 7.20E-12 0.000 0.4358 0.9000 0.0000   0.24 14 14  1.1E-07
+ 35 :   9.83E-03 1.73E-12 0.000 0.2401 0.9187 0.9000   0.08 16 16  4.6E-08
+ 36 :   9.22E-03 5.74E-13 0.000 0.3322 0.9167 0.9000   0.09 17 15  2.6E-08
+ 37 :   8.58E-03 3.09E-13 0.000 0.5389 0.9000 0.9181   0.08 14 17  2.0E-08
+ 38 :   8.02E-03 1.85E-13 0.000 0.5995 0.9000 0.6821   0.10 16 20  1.7E-08
+ 39 :   7.50E-03 7.63E-14 0.000 0.4115 0.9075 0.9000   0.31 19 17  9.7E-09
+
+iter seconds digits       c*x               b*y
+ 39      1.2   Inf  7.4061796787e-03  7.5045275384e-03
+|Ax-b| =   2.0e-08, [Ay-c]_+ =   6.4E-10, |x|=  1.6e+06, |y|=  5.9e+02
+
+Detailed timing (sec)
+   Pre          IPM          Post
+1.065E-01    6.891E-01    2.513E-02    
+Max-norms: ||b||=1, ||c|| = 1,
+Cholesky |add|=0, |skip| = 5, ||L.L|| = 6.02673e+07.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +0.00750453
+ 
+Determinant of STS: -1.373333e-18 
+Removed the following parameters during collinearity clustering:
+ElecFactorDA 
+_e^- 
+t_+ 
+R_f^- 
+
+Removed the following parameters according to noise sensitivity threshold:
+
+Remaining parameters:
+R_s^+ 
+R_f^+ 
+
+Initial Voltage RMSE = 0.028771 
+ 
+<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m',199,1)">199 </a>    p = update_casadi_vars(p,theta,ID_p,current_params_idx,batch_idx);
+if system_dependent('IsDebugMode')==1, dbcont; end
+{Error using <a href="matlab:matlab.internal.language.introspective.errorDocCallback('V_obj', '/Users/ztakeo/Documents/GitHub/sens_ParamID/V_obj.m', 15)" style="font-weight:bold">V_obj</a> (<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/V_obj.m',15,0)">line 15</a>)
+Undefined function or variable 'x0'.
+
+Error in <a href="matlab:matlab.internal.language.introspective.errorDocCallback('sens_ParamID_main>@(x)V_obj(x,opt_data,theta_sx_temp,p,ID_p)')" style="font-weight:bold">sens_ParamID_main>@(x)V_obj(x,opt_data,theta_sx_temp,p,ID_p)</a>
+
+Error in <a href="matlab:matlab.internal.language.introspective.errorDocCallback('fmincon', '/Applications/MATLAB_R2018b.app/toolbox/shared/optimlib/fmincon.p', 555)" style="font-weight:bold">fmincon</a> (<a href="matlab: opentoline('/Applications/MATLAB_R2018b.app/toolbox/shared/optimlib/fmincon.p',555,0)">line 555</a>)
+      [initVals.f,initVals.g] = feval(funfcn{3},X,varargin{:});
+
+Error in <a href="matlab:matlab.internal.language.introspective.errorDocCallback('sens_ParamID_main', '/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m', 205)" style="font-weight:bold">sens_ParamID_main</a> (<a href="matlab: opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/sens_ParamID_main.m',205,0)">line 205</a>)
+       fmincon(fh,theta.guess(current_params_idx),[],[],[],[],lb,ub,[],opt);
+
+Caused by:
+    Failure in initial objective function evaluation. FMINCON cannot
+    continue.
+} 
+opentoline('/Users/ztakeo/Documents/GitHub/sens_ParamID/V_obj.m',15,0)
+sens_ParamID_main
+No Rc value specified for DC1_batt_ObsData.mat profile. 
+No Rc value specified for DC2_batt_ObsData.mat profile. 
+No Rc value specified for LA92x2_batt_ObsData.mat profile. 
+No Rc value specified for SC04x4_batt_ObsData.mat profile. 
+No Rc value specified for UDDSx2_batt_ObsData.mat profile. 
+No Rc value specified for US06x3_batt_ObsData.mat profile. 

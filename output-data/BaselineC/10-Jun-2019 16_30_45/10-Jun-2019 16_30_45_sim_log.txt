@@ -1,0 +1,251 @@
+Discretization Params:
+No. of FDM nodes in Anode | Separator | Cathode : 10 | 5 | 10
+No. of FDM nodes in Single Particles : 30
+ 
+Starting cvx batch select
+ 
+Calling SeDuMi 1.34: 110 variables, 34 equality constraints
+   For improved efficiency, SeDuMi is solving the dual problem.
+------------------------------------------------------------
+SeDuMi 1.34 (beta) by AdvOL, 2005-2008 and Jos F. Sturm, 1998-2003.
+Alg = 2: xz-corrector, Adaptive Step-Differentiation, theta = 0.250, beta = 0.500
+Split 1 free variables
+eqs m = 34, order n = 40, dim = 178, blocks = 8
+nnz(A) = 208 + 0, nnz(ADA) = 764, nnz(L) = 408
+ it :     b*y       gap    delta  rate   t/tP*  t/tD*   feas cg cg  prec
+  0 :            9.04E+03 0.000
+  1 :  -6.66E-02 3.39E+03 0.000 0.3751 0.9000 0.9000   1.49  1  1  4.5E+02
+  2 :  -5.33E+00 6.63E+02 0.000 0.1957 0.9000 0.9000  -0.55  1  1  6.4E+02
+  3 :  -1.99E+01 1.55E+02 0.000 0.2339 0.9000 0.9000  -0.69  1  1  5.0E+02
+  4 :  -1.88E+01 7.09E+01 0.000 0.4571 0.9000 0.9000  -0.33  1  1  3.0E+02
+  5 :  -2.88E+00 3.78E+01 0.000 0.5332 0.9000 0.9000   1.65  1  1  1.0E+02
+  6 :  -1.74E-01 8.95E+00 0.000 0.2366 0.9000 0.9000   1.69  1  1  1.6E+01
+  7 :  -1.18E-02 2.25E+00 0.000 0.2513 0.9000 0.9000   1.33  1  1  3.5E+00
+  8 :   1.54E-02 5.76E-01 0.000 0.2563 0.9000 0.9000   1.23  1  1  8.0E-01
+  9 :   1.97E-02 1.34E-01 0.000 0.2327 0.9000 0.9000   1.19  1  1  1.7E-01
+ 10 :   2.59E-02 3.99E-02 0.000 0.2975 0.9000 0.9000   0.97  1  1  5.3E-02
+ 11 :   3.17E-02 1.34E-02 0.000 0.3357 0.9000 0.8895   0.68  1  1  2.2E-02
+ 12 :   3.47E-02 4.88E-03 0.000 0.3644 0.9013 0.9000   0.47  1  1  1.1E-02
+ 13 :   3.55E-02 1.82E-03 0.000 0.3729 0.9014 0.9000   0.41  1  1  5.7E-03
+ 14 :   3.55E-02 8.21E-04 0.000 0.4512 0.9000 0.0000   0.34  1  1  3.9E-03
+ 15 :   3.56E-02 3.93E-04 0.298 0.4784 0.9000 0.1349   0.35  1  1  2.4E-03
+ 16 :   3.58E-02 7.64E-05 0.000 0.1944 0.9254 0.9000   0.25  1  1  7.5E-04
+ 17 :   3.33E-02 8.83E-06 0.000 0.1157 0.9108 0.9000   0.43  2  2  2.6E-04
+ 18 :   3.15E-02 3.19E-06 0.000 0.3614 0.9115 0.9000   0.46  2  2  1.4E-04
+ 19 :   3.15E-02 1.62E-06 0.000 0.5078 0.9000 0.0000   0.33  2  2  9.9E-05
+ 20 :   2.92E-02 3.73E-07 0.000 0.2299 0.9196 0.9000   0.18  2  2  3.9E-05
+ 21 :   2.92E-02 1.63E-07 0.000 0.4364 0.9000 0.0000  -0.03  2  2  2.9E-05
+ 22 :   2.69E-02 5.79E-08 0.000 0.3561 0.9109 0.9000  -0.22  2  2  1.5E-05
+ 23 :   2.49E-02 1.76E-08 0.000 0.3032 0.9138 0.9000  -0.05  2  3  8.1E-06
+ 24 :   2.49E-02 8.22E-09 0.118 0.4682 0.9000 0.0000   0.02  3  3  5.9E-06
+ 25 :   2.27E-02 3.32E-09 0.000 0.4035 0.9017 0.9000  -0.10  3  3  3.0E-06
+ 26 :   2.27E-02 1.26E-09 0.000 0.3793 0.9000 0.0000  -0.01  3  3  2.1E-06
+ 27 :   2.08E-02 3.79E-10 0.000 0.3013 0.9145 0.9000  -0.24  3  3  1.0E-06
+ 28 :   1.96E-02 1.51E-10 0.000 0.3986 0.9185 0.9000   0.04  7  7  6.2E-07
+ 29 :   1.83E-02 8.93E-11 0.061 0.5913 0.9000 0.9232   0.04  8 11  4.9E-07
+ 30 :   1.70E-02 5.54E-11 0.000 0.6206 0.9000 0.7827   0.09 11  8  4.2E-07
+ 31 :   1.70E-02 2.95E-11 0.000 0.5326 0.9000 0.0000   0.34 10 11  3.1E-07
+ 32 :   1.58E-02 8.39E-12 0.000 0.2841 0.9210 0.9000   0.21 11 10  1.3E-07
+ 33 :   1.42E-02 3.50E-12 0.000 0.4165 0.9000 0.8067  -0.05 13 15  9.8E-08
+ 34 :   1.31E-02 9.27E-13 0.000 0.2652 0.9158 0.9000   0.28 13 14  4.4E-08
+ 35 :   1.21E-02 4.33E-13 0.000 0.4668 0.9000 0.9106   0.26 15 16  2.8E-08
+ 36 :   1.13E-02 2.05E-13 0.000 0.4737 0.9000 0.6934   0.16 18 16  2.1E-08
+ 37 :   1.03E-02 7.65E-14 0.000 0.3734 0.9000 0.9000   0.27 14 16  1.2E-08
+
+iter seconds digits       c*x               b*y
+ 37      0.6   Inf  1.0303662912e-02  1.0349541332e-02
+|Ax-b| =   2.0e-08, [Ay-c]_+ =   1.5E-09, |x|=  8.7e+05, |y|=  5.3e+02
+
+Detailed timing (sec)
+   Pre          IPM          Post
+1.943E-02    2.823E-01    4.667E-03    
+Max-norms: ||b||=1, ||c|| = 1,
+Cholesky |add|=0, |skip| = 5, ||L.L|| = 2.3682e+07.
+------------------------------------------------------------
+Status: Solved
+Optimal value (cvx_optval): +0.0103495
+ 
+Determinant of STS: -6.153200e-18 
+Removed the following parameters during collinearity clustering:
+ElecFactorDA 
+_e^- 
+t_+ 
+R_f^- 
+
+Removed the following parameters according to noise sensitivity threshold:
+
+Remaining parameters:
+R_s^+ 
+R_f^+ 
+
+
+
+
+BEGINNING PARAMETER ID ROUTINE
+Baseline C 
+Start Time: 10-Jun-2019 16:30:45 
+ 
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Batch #1 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Iter:1000, v_sim: 3.460678
+Iter:2000, v_sim: 3.360965
+Iter:3000, v_sim: 3.394623
+Iter:1000, v_sim: 3.509770
+Iter:2000, v_sim: 3.409016
+Iter:1000, v_sim: 3.555238
+Iter:2000, v_sim: 3.469344
+Iter:3000, v_sim: 3.456152
+Total voltage RMSE = 0.017680 
+ 
+
+____________________________________________________________
+   Diagnostic Information
+
+Number of variables: 2
+
+Functions 
+Objective and gradient:               @(x)V_obj(x,opt_data,theta_sx_temp,p,ID_p)
+Hessian:                              finite-differencing (or Quasi-Newton)
+
+Constraints
+Nonlinear constraints:                do not exist
+ 
+Number of linear inequality constraints:    0
+Number of linear equality constraints:      0
+Number of lower bound constraints:          2
+Number of upper bound constraints:          2
+
+Algorithm selected
+   sqp
+
+
+____________________________________________________________
+   End diagnostic information
+ Iter  Func-count            Fval   Feasibility   Step Length       Norm of   First-order  
+                                                                       step    optimality
+    0           1    1.767959e-02     0.000e+00     1.000e+00     0.000e+00     1.167e+04  
+Iter:1000, v_sim: 3.520093
+Iter:2000, v_sim: 3.376387
+Iter:3000, v_sim: 3.394853
+Iter:1000, v_sim: 3.547686
+Iter:2000, v_sim: 3.424896
+Iter:1000, v_sim: 3.573853
+Iter:2000, v_sim: 3.472182
+Iter:3000, v_sim: 3.455633
+Total voltage RMSE = 0.080594 
+ 
+Iter:1000, v_sim: 3.512778
+Iter:2000, v_sim: 3.375526
+Iter:3000, v_sim: 3.394800
+Iter:1000, v_sim: 3.542244
+Iter:2000, v_sim: 3.425109
+Iter:1000, v_sim: 3.575587
+Iter:2000, v_sim: 3.472582
+Iter:3000, v_sim: 3.455607
+Total voltage RMSE = 0.065431 
+ 
+Iter:1000, v_sim: 3.502715
+Iter:2000, v_sim: 3.372769
+Iter:3000, v_sim: 3.394734
+Iter:1000, v_sim: 3.535338
+Iter:2000, v_sim: 3.422948
+Iter:1000, v_sim: 3.572952
+Iter:2000, v_sim: 3.473671
+Iter:3000, v_sim: 3.455670
+Total voltage RMSE = 0.047352 
+ 
+Iter:1000, v_sim: 3.492996
+Iter:2000, v_sim: 3.370072
+Iter:3000, v_sim: 3.394712
+Iter:1000, v_sim: 3.529083
+Iter:2000, v_sim: 3.419915
+Iter:1000, v_sim: 3.569124
+Iter:2000, v_sim: 3.473627
+Iter:3000, v_sim: 3.455824
+Total voltage RMSE = 0.031673 
+ 
+Iter:1000, v_sim: 3.484781
+Iter:2000, v_sim: 3.367783
+Iter:3000, v_sim: 3.394710
+Iter:1000, v_sim: 3.524010
+Iter:2000, v_sim: 3.417158
+Iter:1000, v_sim: 3.565664
+Iter:2000, v_sim: 3.472983
+Iter:3000, v_sim: 3.455950
+Total voltage RMSE = 0.019521 
+ 
+Iter:1000, v_sim: 3.478281
+Iter:2000, v_sim: 3.365962
+Iter:3000, v_sim: 3.394706
+Iter:1000, v_sim: 3.520104
+Iter:2000, v_sim: 3.414948
+Iter:1000, v_sim: 3.562876
+Iter:2000, v_sim: 3.472215
+Iter:3000, v_sim: 3.456034
+Total voltage RMSE = 0.011138 
+ 
+Iter:1000, v_sim: 3.478281
+Iter:2000, v_sim: 3.365962
+Iter:3000, v_sim: 3.394706
+Iter:1000, v_sim: 3.520104
+Iter:2000, v_sim: 3.414948
+Iter:1000, v_sim: 3.562876
+Iter:2000, v_sim: 3.472215
+Iter:3000, v_sim: 3.456034
+Total voltage RMSE = 0.011138 
+ 
+    1           8    1.113793e-02     0.000e+00     1.681e-01     1.860e-05     1.066e+04  
+Iter:1000, v_sim: 3.471208
+Iter:2000, v_sim: 3.363748
+Iter:3000, v_sim: 3.394691
+Iter:1000, v_sim: 3.515754
+Iter:2000, v_sim: 3.412294
+Iter:1000, v_sim: 3.558968
+Iter:2000, v_sim: 3.471062
+Iter:3000, v_sim: 3.456112
+Total voltage RMSE = 0.007261 
+ 
+Iter:1000, v_sim: 3.471208
+Iter:2000, v_sim: 3.363748
+Iter:3000, v_sim: 3.394691
+Iter:1000, v_sim: 3.515754
+Iter:2000, v_sim: 3.412294
+Iter:1000, v_sim: 3.558968
+Iter:2000, v_sim: 3.471062
+Iter:3000, v_sim: 3.456112
+Total voltage RMSE = 0.007261 
+ 
+    2          10    7.261179e-03     1.694e-21     1.000e+00     9.152e-05     2.700e+03  
+Iter:1000, v_sim: 3.472972
+Iter:2000, v_sim: 3.364255
+Iter:3000, v_sim: 3.394697
+Iter:1000, v_sim: 3.516795
+Iter:2000, v_sim: 3.412899
+Iter:1000, v_sim: 3.559762
+Iter:2000, v_sim: 3.471345
+Iter:3000, v_sim: 3.456097
+Total voltage RMSE = 0.007123 
+ 
+Iter:1000, v_sim: 3.472972
+Iter:2000, v_sim: 3.364255
+Iter:3000, v_sim: 3.394697
+Iter:1000, v_sim: 3.516795
+Iter:2000, v_sim: 3.412899
+Iter:1000, v_sim: 3.559762
+Iter:2000, v_sim: 3.471345
+Iter:3000, v_sim: 3.456097
+Total voltage RMSE = 0.007123 
+ 
+    3          12    7.122681e-03     0.000e+00     1.000e+00     2.096e-07     1.414e+03  
+
+<a href = "matlab: helpview([docroot '/toolbox/optim/msg_csh/optim_msg_csh.map'],'local_min_poss_with_constr','CSHelpWindow');">Local minimum possible. Constraints satisfied</a>.
+
+fmincon stopped because the <a href = "matlab: helpview([docroot '/toolbox/optim/msg_csh/optim_msg_csh.map'],'norm_curr_step_simple_fminconip','CSHelpWindow');">size of the current step</a> is less than
+the default value of the <a href = "matlab: helpview([docroot '/toolbox/optim/msg_csh/optim_msg_csh.map'],'step_size_tol','CSHelpWindow');">step size tolerance</a> and constraints are 
+satisfied to within the default value of the <a href = "matlab: helpview([docroot '/toolbox/optim/msg_csh/optim_msg_csh.map'],'constraint_tolerance','CSHelpWindow');">constraint tolerance</a>.
+
+<<a href = "matlab: createExitMsg('sqpLineSearch',2.000000e+00,true,true,'fmincon',1.694066e-21,'default',1.000000e-06,0.000000e+00,'default',1.000000e-06,0.000000e+00,'',0.000000e+00);">stopping criteria details</a>>
+
+Finished in 9.154167e+02 seconds at 10-Jun-2019 16:46:02 
