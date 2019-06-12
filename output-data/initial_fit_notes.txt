@@ -1,1 +1,0 @@
-Initial Voltage RMSE = 0.046655 
