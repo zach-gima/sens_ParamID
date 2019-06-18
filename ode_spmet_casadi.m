@@ -44,7 +44,6 @@ function [x_dot,x_outs,L,alg_states] = ode_spmet_casadi(x,cur,p)
     % approximate jn by jn_tot, which should be ok, since jn and jn_tot have a
     % error on the order of 0.001%
 
-
     %%% ELECTROLYTE PHASE DYNAMICS
     % Compute electrolyte Boundary Conditions
     c_e_bcs = p.ce.C * c_e;
@@ -150,7 +149,6 @@ function [x_dot,x_outs,L,alg_states] = ode_spmet_casadi(x,cur,p)
 
     % Add 'em up!
     V = V_noVCE + V_electrolyteCond + V_electrolytePolar - p.R_c*cur; %IR Drop added ZTG 2019-4-24
-
 
     %% Aging Dynamics
 

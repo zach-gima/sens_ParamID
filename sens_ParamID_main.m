@@ -1,5 +1,4 @@
 %% Sensitivity-based Online Parameter Estimation for SPMeT
-%%% FUNCTIONALIZE THIS
 % By: Zach Gima, 2019-4-12
 clear;
 clc;
@@ -46,7 +45,6 @@ data = load_data(p,input_folder);
 
 output_folder = strcat('output-data/','Baseline',baseline,'/',date_txt,'/');
 mkdir(output_folder); %create new subfolder with current date in output_folder
-
 output_path = strcat(output_folder,date_txt,'_results');
 
 % For saving errors:
@@ -119,12 +117,10 @@ for batch_idx = 1:ID_p.num_batches
     theta_guess_initial = theta.guess; 
     theta_str_initial = theta.str;
     
-    parfor ii = 1:ID_p.num_events
+    for ii = 1:ID_p.num_events
         [V_sim_initial{ii},state_info_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
-        [V_check{ii},state_check{ii}] = spmet_casadi(p,data(ii));
-
     end
-%     clear theta_guess_initial theta_str_initial
+    clear theta_guess_initial theta_str_initial
     
     % Compute STS_norm for selecting optimal data
     STS_norm_initial = cell(ID_p.num_events,1);
@@ -208,6 +204,11 @@ for batch_idx = 1:ID_p.num_batches
     [theta_ID,FVAL,EXITFLAG,OUTPUT,LAMBDA,GRAD,HESSIAN]= ...
        fmincon(fh,theta_guess_current,[],[],[],[],lb,ub,[],opt);
 
+    % Update computation time-related metrics
+    wallclock = toc;
+    datetime_final{batch_idx} = datetime('now','TimeZone','America/Los_Angeles');
+    fprintf('Finished in %i seconds at %s \n',wallclock,datetime_final{batch_idx})
+    
     % Update p struct with newly ID'ed values
     p = update_p_struct(p,theta_ID,theta_str_current);
     
@@ -216,28 +217,20 @@ for batch_idx = 1:ID_p.num_batches
     theta.history(:,batch_idx+1) = theta.history(:,batch_idx); % for parameters not identified this batch, this stores the previous value (i.e. it stays constant)
     theta.history(current_params_idx,batch_idx+1) = theta_ID;
     
-    % Update computation time-related metrics
-    wallclock = toc;
-    datetime_final{batch_idx} = datetime('now','TimeZone','America/Los_Angeles');
-    fprintf('Finished in %i seconds at %s \n',wallclock,datetime_final{batch_idx})
-    
-    % re-simulate model for this batch and final parameter set identified
+    %% re-simulate model for the final parameter set identified: need updated voltage profile and sens data for Conf. Int.
     V_sim = cell(ID_p.num_events,1);
     state_info = cell(ID_p.num_events,1);
     sens = cell(ID_p.num_events,1);
     
+    % create temp params to pass to spmet_casadi
+    theta_guess_current =  theta.guess(current_params_idx);
+    theta_str_current = theta.str(current_params_idx);
+    
     parfor ii = 1:ID_p.num_events
-        %%%% ZTG Note 2019-6-17: should I be passing in just the parameters
-        %%%% we sought to identify? or all of the params?
-        % difference between passing theta_guess_current, theta_str_current
-        % vs passing in all the params i.e.:
-        %     theta_guess_initial = theta.guess; 
-        %     theta_str_initial = theta.str;
-        [V_sim{ii},state_info{ii},sens{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
-%         [V_check{ii},state_check{ii}] = spmet_casadi(p,data(ii));
+        [V_sim{ii},state_info{ii},sens{ii}] = spmet_casadi(p,data(ii),theta_guess_current,theta_str_current);
     end
     
-    % save current batch data
+    %% save current batch data
     ID_out.V_sim = V_sim;
     ID_out.state_info = state_info;
     ID_out.sens = sens;

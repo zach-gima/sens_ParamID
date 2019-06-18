@@ -2,19 +2,22 @@
 % By: Zach Gima 2019-4-15
 
 % INPUTS --- 
-% (1) data: struct with fields cur (current), time, V0
-% (2) x0_nom: initial nominal (i.e. not symbolic casadi variables) values associated with the states of the
-% model 
-% (3) theta_0: initial numerical values for the parameters we'd like to
+%%% FOR JUST VOLTAGE SIMULATION
+% (1) p: structure containing all of the parameters needed for the model
+% (2) data: struct with fields cur (current), time, V0
+
+%%% FOR VOLTAGE + SENSITIVITY SIMULATION
+% (3) varargin{1} -- theta_0: initial numerical values for the parameters we'd like to
 % identify
+% (4) theta_str: string format of the names of the parameters we'd like to
+% identify; match the field name associated w/ that param in the p struct
 % (4) theta_sx: casadi format of the parameters we'd like to identify
-% (5) p: parameter vector
 
 % OUTPUTS --- 
-% (1) voltage 
-% (2) sensitivity of parameters (p) passed into the
+% (1) v_sim: voltage 
+% (2) state_info: additional internal state info of the model
+% (3) varargout{1} -- sens: sensitivity of parameters (p) passed into the
 % function (partial V / partial theta) 
-% (3) algebraic (may be incorrect description) states of the model
 
 function [v_sim,state_info,varargout] = spmet_casadi(p,data,varargin)
     import casadi.*
@@ -197,15 +200,14 @@ function [v_sim,state_info,varargout] = spmet_casadi(p,data,varargin)
     x_sim(:,1) = x0;
     v_sim(1) = V0;
 
-    % save x
+    % initialize other states
     csn_sim(:,1) = f0(out_csn_idx);
     csp_sim(:,1) = f0(out_csp_idx);
     ce_sim(:,1) = f0(out_ce_idx);
     T1_sim(1) = f0(end-2);
     T2_sim(1) = f0(end-1);
     delta_sei_sim(1) = f0(end);
-    
-    % save other internal states
+    % ZTG Note: Below states added
     cssn_sim(1) = a0(out_cssn_idx);
     cssp_sim(1) = a0(out_cssp_idx);
     cex_sim(:,1) = a0(out_cex_idx);
@@ -296,27 +298,6 @@ function [v_sim,state_info,varargout] = spmet_casadi(p,data,varargin)
         state_info = [];
         sens(1:length(S3_sim),:) = S3_sim';   
         varargout{1} = sens;
-    
-%         % x info
-%         state_info.csn_sim = csn_sim;
-%         state_info.csp_sim = csp_sim;
-%         state_info.ce_sim = ce_sim;
-%         state_info.T1_sim = T1_sim;
-%         state_info.T2_sim = T2_sim;
-%         
-%         % Internal States
-%         state_info.cssn_sim = cssn_sim;
-%         state_info.cssp_sim = cssp_sim;
-%         state_info.cex_sim = cex_sim;
-%         state_info.SOCn_sim = SOCn_sim;
-%         state_info.SOCp_sim = SOCp_sim;
-%         state_info.etan_sim = etan_sim;
-%         state_info.etap_sim = etap_sim;
-%         state_info.ce0n_sim = ce0n_sim;
-%         state_info.ce0p_sim = ce0p_sim;
-%         state_info.etas_sim = etas_sim;
-%         
-%         save('casadi_debug.mat','v_sim','state_info','sens','I', 't')
         return
     end
 
