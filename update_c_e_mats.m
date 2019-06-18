@@ -3,8 +3,8 @@
 % according to the parameters. Function was written in the context of
 % parameter estimation, where re-identifying some electrolyte-related
 % parameters would consequently require these matrices (stored in the p struct) to be updated
-function p = update_c_e_mats(p)
-    [M1n,M2n,M3n,M4n,M5n, M1s,M2s,M3s,M4s, M1p,M2p,M3p,M4p,M5p, C_ce] = c_e_mats(p);
+function p = update_c_e_mats(p,SensFlag)
+    [M1n,M2n,M3n,M4n,M5n, M1s,M2s,M3s,M4s, M1p,M2p,M3p,M4p,M5p, C_ce] = c_e_mats(p,SensFlag);
 %     [M1n,M2n,M3n,M4n,M5n, M1s,M2s,M3s,M4s, M1p,M2p,M3p,M4p,M5p, C_ce] = c_e_mats_nocasadi(p);
     p.ce.M1n = M1n;
     p.ce.M2n = M2n;

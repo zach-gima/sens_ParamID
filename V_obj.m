@@ -5,20 +5,22 @@
 % Inputs: (1) Initial parameter estimate
 %         (2) Input profile
 
-function [ cost,fgrad ] = V_obj(theta_0, data, theta_sx, p,ID_p)
-    num_events = ID_p.event_budget;
+function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
+    num_events = length(data);
     
     %% Simulate SPMeT
     v_sim_cell = cell(num_events,1);
     sens_cell = cell(num_events,1);
     
-    for ii = 1:num_events
-        [v_sim_cell{ii},sens_cell{ii},~] = spmet_casadi(data(ii),theta_0,theta_sx,p,1);
+    parfor ii = 1:num_events
+        [v_sim_cell{ii},~,sens_cell{ii}] = spmet_casadi(p,data(ii),theta_0,theta_str);        
     end
     
     cost = 0;
     fgrad = 0;
     
+    % Cost function is the sum of non-contiguous events -- add up cost and gradient for
+    % each event!
     for ii = 1:num_events
         
         % Parse current event data

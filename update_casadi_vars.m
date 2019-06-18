@@ -2,20 +2,18 @@
 % This is necessary for sensitivity computations
 
 % By: Zach Gima 2019-6-10
-function [p] = update_casadi_vars(p,theta,ID_p,current_params_idx,jj)
-    % iterate through all of the parameters intially specified to potentially be ID'ed
-    for mm = 1:ID_p.np 
-        if ismember(mm,current_params_idx) % parameter being identified
-            % then overwrite with SX type
-            p.(theta.str{mm}) = theta.sx(mm);
-        else % (parameter not being identified)
-            % want to use most up-to-date estimated parameter value -- could
-            % have re-identified a batch or two ago, so want to use that value
-            p.(theta.str{mm}) = theta.history(mm,jj);
-        end
+function [p,theta_sx] = update_casadi_vars(p,theta_str)
+    import casadi.*
+    np = length(theta_str);
+    theta_sx = SX.zeros(np,1);
+    
+    % iterate through all of the parameters and generate casadi variables
+    for mm = 1:np
+        theta_sx(mm) = SX.sym(theta_str{mm});
+        p.(theta_str{mm}) = theta_sx(mm);
     end
     
     % Update parameter dependencies: some parameters are functions of the above
     % specified parameters
-    p = update_dependencies(p);
+    p = update_dependencies(p,1);
 end

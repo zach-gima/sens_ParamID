@@ -4,7 +4,7 @@
 % Inputs:
 % Outputs: 
 
-function [params_final_idx] = param_remove(data,ID_p,theta_char)
+function [paramID_idx] = param_remove(data,ID_p,theta_char)
     %% Parse Inputs
 %     STS_norm = data.STS_norm; % STS_batch is already normalized
     corr_coeff_matrix = data.corr_coeff_matrix;
@@ -40,10 +40,10 @@ function [params_final_idx] = param_remove(data,ID_p,theta_char)
     tot_removed = [coll_removed_idx, remain_p(sens_remove_idx)];
     
     np_final = np - length(tot_removed);
-    params_final_idx = remaining(np,tot_removed)';
+    paramID_idx = remaining(np,tot_removed)';
 
     disp('Remaining parameters:')
-    fprintf('%s \n', theta_char{params_final_idx});
+    fprintf('%s \n', theta_char{paramID_idx});
     fprintf('\n');
 
 end

@@ -5,7 +5,8 @@
 %   Now outputs dynamic and algebraic state information
 %   Called by spmet.m
 
-function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
+function [x_dot,x_outs,L,alg_states] = ode_spmet_casadi(x,cur,p)
+    import casadi.*
 
     %% Parse Input Data
 
@@ -48,17 +49,16 @@ function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
     % Compute electrolyte Boundary Conditions
     c_e_bcs = p.ce.C * c_e;
 
-    ce0n = c_e_bcs(1);
-    cens = c_e_bcs(2);
-    cesp = c_e_bcs(3);
-    ce0p = c_e_bcs(4);
+    c_e0n = c_e_bcs(1);
+    c_ens = c_e_bcs(2);
+    c_esp = c_e_bcs(3);
+    c_e0p = c_e_bcs(4);
 
     % Separate and aggregate electrolyte concentration
     c_en = c_e(1:(p.Nxn-1));
     c_es = c_e((p.Nxn-1)+1:(p.Nxn-1)+(p.Nxs-1));
     c_ep = c_e((p.Nxn-1)+p.Nxs : end);
-    c_ex = [ce0n; c_en; cens; c_es; cesp; c_ep; ce0p];
-
+    c_ex = [c_e0n; c_en; c_ens; c_es; c_esp; c_ep; c_e0p];
 
     %% Voltage output
 
@@ -144,7 +144,7 @@ function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
     %%%% [ZTG CHANGE] -- this form enables sensitivity to be more easily computed
     dActivity = [dfca_n; dfca_s; dfca_p]; 
     dActivity = p.ElecFactorDA*dActivity; % introduced p.ElecFactorDA to easily perturb activity coefficients
-    log_cex =  [log(cens) - log(ce0n);log(cesp) - log(cens); log(ce0p) - log(cesp)];
+    log_cex =  [log(c_ens) - log(c_e0n);log(c_esp) - log(c_ens); log(c_e0p) - log(c_esp)];
 
     V_electrolytePolar = (2*p.R*T1)/(p.Faraday) * (1-p.t_plus)*(1+dActivity)'*log_cex;
 
@@ -164,7 +164,7 @@ function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
     % Difference btw solid and electrolyte overpotential [V]
     phi_se = eta_n + Unref + p.Faraday*R_tot_n*jn_tot;
 
-    % Side exn overpotential [V]
+    % Side rxn overpotential [V]
     eta_s = phi_se - p.Us - p.Faraday*R_tot_n * jn_tot;
 
     % Molar flux of side rxn [mol/s-m^2]
@@ -182,7 +182,6 @@ function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
     % ODE for c_s
     c_s_n_dot = A_n*c_s_n + B_n*jn;
     c_s_p_dot = A_p*c_s_p + B_p*jp;
-
 
     %% Electrolyte Dynamics
 
@@ -234,7 +233,6 @@ function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
     % Assemble c_e_dot
     c_e_dot = [c_en_dot; c_es_dot; c_ep_dot];
 
-
     %% Thermal Dynamics
 
     % State-of-Charge (Bulk)
@@ -268,12 +266,16 @@ function [x_dot,x_outs,L,varargout] = ode_spmet_casadi(x,cur,p)
     % output quadrature
     L = V;
     
-    % other outputs
-    varargout{1} = V_noVCE;
-    varargout{2} = SOC_n;
-    varargout{3} = SOC_p;
-    varargout{4} = c_ss_n;
-    varargout{5} = c_ss_p;
-    varargout{6} = c_ex';
+    % other internal states
+    alg_states = [c_ss_n; c_ss_p; c_ex; SOC_n; SOC_p; eta_n; eta_p; c_e0n; c_e0p; eta_s];
+    
+%     % other outputs
+%     varargout{1} = V_noVCE;
+%     varargout{2} = SOC_n;
+%     varargout{3} = SOC_p;
+%     varargout{4} = c_ss_n;
+%     varargout{5} = c_ss_p;
+%     varargout{6} = c_ex';
+%     varargout{7} = eta_s; % side rxn overpotential
 end
 

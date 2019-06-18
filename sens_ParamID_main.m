@@ -5,13 +5,16 @@ clear;
 clc;
 close all;
 
-import casadi.*
-
 % FontSize
 fs = 25;
 
 datetime_initial = datetime('now','TimeZone','America/Los_Angeles');
 date_txt = strrep(datestr(datetime_initial), ':', '_');
+
+addpath('/Users/ztakeo/Documents/MATLAB/casadi') % Mac Laptop
+% addpath('C:/Users/Zach/Documents/MATLAB/casadi_windows') % HPC-1
+% addpath('C:/Users/zgima/Documents/MATLAB/casadi_windows') % HPC-2
+% addpath('/global/home/users/ztakeo/modules/casadi-matlab');    % For Savio
 
 %% instantiate global variables that will track iterations within fmincon & optimization options object
 global history;
@@ -33,7 +36,7 @@ run param/params_bounds
 % run param/params_LCO % loads p struct
 
 %%% Set input/output paths & load data
-baseline = 'C'; %'B' 'C'
+baseline = 'C'; %'C'; %'B' 'C'
 data_select_logic = 1; % 1 for selecting data according to sensitivity content
 soc_0 = 'SOC60'; %SOC#
 input_folder = strcat('input-data/SPMeT/',soc_0,'/');
@@ -75,26 +78,23 @@ p = set_discretization(p);
 perturb_factor = 1.3;
 theta.truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
 theta.guess = perturb_factor*theta.truth;
+
 ID_p.np = length(theta.guess);
+params_all_idx = (1:ID_p.np)'; % vector of indices for all parameters, used for initial model simulation
 
 theta.history = zeros(ID_p.np,ID_p.num_batches+1); % array used to track identified values for each parameter over all of the batches
 theta.history(:,1) = theta.guess;
 theta.char = {'R_s^+';'ElecFactorDA';horzcat(char(949),'_e^-');'t_+';'R_f^-';'R_f^+'}; % char version of the params, used for plotting/fprintf purposes
 theta.str = {'R_s_p';'ElecFactorDA';'epsilon_e_n';'t_plus';'R_f_n';'R_f_p'}; % exact names of the p struct fields, used for updating parameter values
 
-% CasADi symbolic representation of parameters to be identified
-theta.sx = SX.zeros(ID_p.np,1); 
-theta.sx(1) = SX.sym('R_s_p');
-theta.sx(2) = SX.sym('ElecFactorDA');
-theta.sx(3) = SX.sym('epsilon_e_n');
-theta.sx(4) = SX.sym('t_plus');
-theta.sx(5) = SX.sym('R_f_n');
-theta.sx(6) = SX.sym('R_f_p');
+% update p struct with initial guess
+p = update_p_struct(p,theta.guess,theta.str);
 
 %% Run ParamID routine
 % Initialize variables
 sens_data(ID_p.num_batches) = struct();
-params_final_idx = cell(ID_p.num_batches,1);
+paramID_idx = cell(ID_p.num_batches,1);
+datetime_final = cell(ID_p.num_batches,1);
 
 fprintf('\n')
 disp('*********BEGINNING PARAMETER ID ROUTINE*********')
@@ -108,44 +108,48 @@ for batch_idx = 1:ID_p.num_batches
     fprintf('Batch #%i \n',batch_idx)
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     
-    % Update p struct with CasADi variables for every possible parameter to be ID'ed
-    % & Update parameter dependencies: some parameters are functions of the above specified parameters
-    p = update_casadi_vars(p,theta,ID_p,(1:ID_p.np)',1);
-    
     %% Simulate SPMeT for initial parameter guess: voltage, sensitivity
-%     % Used for event_select
-%     V_sim_initial = cell(ID_p.num_events,1);
-%     sens = cell(ID_p.num_events,1);
-% 
-%     % Simulate model for Voltage, Sensitivity
-%     parfor ii = 1:ID_p.num_events
-%         [V_sim_initial{ii},sens{ii},~] = spmet_casadi(data(ii),theta.guess,theta.sx,p,1);
-%     end
-% 
-%     % Compute STS_norm for selecting optimal data
-%     STS_norm_initial = cell(ID_p.num_events,1);
-%     for ii = 1:ID_p.num_events
-%         data(ii).V_sim_initial = V_sim_initial{ii};
-%         data(ii).sens_initial = sens{ii};
-% 
-%         %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
-%         %%% normalize_sens_factor -- should this factor update with
-%         %%% parameter updates?
-%         [STS_norm_initial{ii},~,~] = compute_sens_variables(p,bounds,sens{ii});
-%     end
+    % Used for event_select
+    V_sim_initial = cell(ID_p.num_events,1);
+    sens_initial = cell(ID_p.num_events,1);
+    state_info_initial = cell(ID_p.num_events,1);
+    
+    % Simulate model for Voltage, Sensitivity
+    % parfor loops don't behave well with structures; assign temp variable
+    theta_guess_initial = theta.guess; 
+    theta_str_initial = theta.str;
+    
+    parfor ii = 1:ID_p.num_events
+        [V_sim_initial{ii},state_info_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
+        [V_check{ii},state_check{ii}] = spmet_casadi(p,data(ii));
 
-%     % Debugging -- save data so don't have to regenerate every time
-%     save('initial_sim.mat','data','STS_norm_initial');
-    load('initial_sim.mat');
+    end
+%     clear theta_guess_initial theta_str_initial
+    
+    % Compute STS_norm for selecting optimal data
+    STS_norm_initial = cell(ID_p.num_events,1);
+    for ii = 1:ID_p.num_events
+        data(ii).V_sim_initial = V_sim_initial{ii};
+        data(ii).sens_initial = sens_initial{ii};
+
+        %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
+        %%% normalize_sens_factor -- should this factor update with
+        %%% parameter updates?
+        [STS_norm_initial{ii},~,~] = compute_sens_variables(p,bounds,sens_initial{ii});
+    end
+
+    % Debugging -- save data so don't have to regenerate every time
+    save(strcat(output_folder,date_txt,'_initial_sim'),'data','STS_norm_initial','state_info_initial');
+%     load('initial_sim.mat');
 
     %% Select events
     % opt_event_idx contains the indices corresponding to events that were
     % selected for having the highest sensitivity content w.r.t. the parameters
     % of interest
     if data_select_logic == 1
-        [opt_event_idx] = event_select(ID_p,STS_norm_initial);
-    else
-        opt_event_idx = (1:ID_p.np)';
+        opt_event_idx = event_select(ID_p,STS_norm_initial);
+    else 
+        opt_event_idx = (1:ID_p.num_events)'; % all events selected
     end
     opt_data = data(opt_event_idx); % create new struct of just the optimal data
 
@@ -163,10 +167,10 @@ for batch_idx = 1:ID_p.num_batches
     % For each batch of optimal data, determine which parameters to identify 
    % Baseline A: All Params
     if strcmp('A',baseline) 
-        params_final_idx{batch_idx} = (1:ID_p.np)';
+        paramID_idx{batch_idx} = (1:ID_p.np)';
     % Baseline B and C
     elseif strcmp('B',baseline) || strcmp('C',baseline)
-        [params_final_idx{batch_idx}] = param_remove(sens_data(batch_idx),ID_p,theta.char);
+        [paramID_idx{batch_idx}] = param_remove(sens_data(batch_idx),ID_p,theta.char);
     else
         error('Baseline improperly specified. Set baseline = ''A'',''B'', or ''C'' ')
     end
@@ -192,49 +196,71 @@ for batch_idx = 1:ID_p.num_batches
     fprintf('Initial Voltage RMSE = %1.6f \n \n',cost_initial);
     
     % Set parameters to be identified based on the batch
-    current_params_idx = params_final_idx{batch_idx};
-    theta_sx_temp = theta.sx(current_params_idx);
+    current_params_idx = paramID_idx{batch_idx};
     lb = bounds.min(current_params_idx);
-    ub = bounds.max(current_params_idx);
-    
-    % Now that we've reduced the set of parameters we're identifying, we
-    % need to convert the parmaeters not being identified from a casadi sx type back to their
-    % nominal parameter value
-    p = update_casadi_vars(p,theta,ID_p,current_params_idx,batch_idx);
+    ub = bounds.max(current_params_idx);    
+    theta_guess_current = theta.guess(current_params_idx);
+    theta_str_current = theta.str(current_params_idx);
     
     % create anonymous function to pass in other parameters needed for V_obj
-    fh = @(x)V_obj(x,opt_data,theta_sx_temp,p,ID_p);
+    fh = @(x)V_obj(x,opt_data,theta_str_current,p);
     
     [theta_ID,FVAL,EXITFLAG,OUTPUT,LAMBDA,GRAD,HESSIAN]= ...
-       fmincon(fh,theta.guess(current_params_idx),[],[],[],[],lb,ub,[],opt);
+       fmincon(fh,theta_guess_current,[],[],[],[],lb,ub,[],opt);
 
+    % Update p struct with newly ID'ed values
+    p = update_p_struct(p,theta_ID,theta_str_current);
+    
     % Store identified values & update guess for next event
     theta.guess(current_params_idx) = theta_ID;
     theta.history(:,batch_idx+1) = theta.history(:,batch_idx); % for parameters not identified this batch, this stores the previous value (i.e. it stays constant)
     theta.history(current_params_idx,batch_idx+1) = theta_ID;
     
+    % Update computation time-related metrics
+    wallclock = toc;
+    datetime_final{batch_idx} = datetime('now','TimeZone','America/Los_Angeles');
+    fprintf('Finished in %i seconds at %s \n',wallclock,datetime_final{batch_idx})
+    
+    % re-simulate model for this batch and final parameter set identified
+    V_sim = cell(ID_p.num_events,1);
+    state_info = cell(ID_p.num_events,1);
+    sens = cell(ID_p.num_events,1);
+    
+    parfor ii = 1:ID_p.num_events
+        %%%% ZTG Note 2019-6-17: should I be passing in just the parameters
+        %%%% we sought to identify? or all of the params?
+        % difference between passing theta_guess_current, theta_str_current
+        % vs passing in all the params i.e.:
+        %     theta_guess_initial = theta.guess; 
+        %     theta_str_initial = theta.str;
+        [V_sim{ii},state_info{ii},sens{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
+%         [V_check{ii},state_check{ii}] = spmet_casadi(p,data(ii));
+    end
+    
+    % save current batch data
+    ID_out.V_sim = V_sim;
+    ID_out.state_info = state_info;
+    ID_out.sens = sens;
+    ID_out.data = data;
+    ID_out.params_final_idx = paramID_idx;
+    ID_out.opt_event_idx = opt_event_idx;
+    ID_out.datetime_initial = datetime_initial;
+    ID_out.datetime_final = datetime_final;
+    ID_out.wallclock = wallclock;
+    ID_out.theta = theta;
+    ID_out.perturb_factor = perturb_factor;
+    ID_out.fmincon_out = OUTPUT;
+    ID_out.fmincon_fval = FVAL;
+    ID_out.fmincon_exitflag = EXITFLAG;
+    ID_out.fmincon_history = history;
+    ID_out.fmincon_searchdir = searchdir;
+    
+    save(strcat(output_path,'_batch_',num2str(batch_idx)),'ID_out')
+    clear ID_out
+
 end
 
-wallclock = toc;
-datetime_final = datetime('now','TimeZone','America/Los_Angeles');
-fprintf('Finished in %i seconds at %s \n',wallclock,datetime_final)
 diary off
-
-%% Save Stuff Here
-ID_out.data = data;
-ID_out.params_final_idx = params_final_idx;
-ID_out.opt_event_idx = opt_event_idx;
-ID_out.datetime_initial = datetime_initial;
-ID_out.datetime_final = datetime_final;
-ID_out.wallclock = wallclock;
-ID_out.theta = theta;
-ID_out.perturb_factor = perturb_factor;
-ID_out.fmincon_out = OUTPUT;
-ID_out.fmincon_fval = FVAL;
-ID_out.fmincon_exitflag = EXITFLAG;
-ID_out.fmincon_history = history;
-ID_out.fmincon_searchdir = searchdir;
-save(output_path,'ID_out')
 
 %% The purpose of this function is to save the iteration values 
 %found and slightly modified from online documentation

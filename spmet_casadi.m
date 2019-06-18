@@ -16,20 +16,34 @@
 % function (partial V / partial theta) 
 % (3) algebraic (may be incorrect description) states of the model
 
-function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag)
+function [v_sim,state_info,varargout] = spmet_casadi(p,data,varargin)
     import casadi.*
-    
-    %% Parse Parameters
-    np = length(theta_0);
+      
+    %% Parse Inputs
     I = data.cur;
     t = data.time;
     V0 = data.V0;
+    T_amb = data.T_amb;
+
     dt =  t(2)-t(1);
     NT = length(t);
-    T_amb = data.T_amb;
     
-    %% update parameter dependencies (some parameters are functions of other parameters which may have changed)
-    p = update_dependencies(p);
+    % varargin used if computing sensitivity / identifying parameters in the model
+    if nargin > 2
+        theta_0 = varargin{1};
+        theta_str = varargin{2};
+        SensFlag = 1;
+        np = length(theta_0);
+
+        % Generate & Assign CasADi Variables to p struct
+        [p,theta_sx] = update_casadi_vars(p,theta_str);
+        
+    else % just simulating the model
+        theta_sx = [];
+        theta_0 = [];
+        SensFlag = 0;
+        p = update_dependencies(p,SensFlag);
+    end
     
     %% SPMeT State Initialization
     x0_nom = init_spmet(p,V0,T_amb,0);
@@ -41,18 +55,16 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
     %%% Input
     u = SX.sym('u');
     
-    % Build the SPMeT ode System; 
+    % Build the SPMeT ode System for the intial states; 
     % ode_spmet_casadi holds all of the odes that define the model
-    [x_dot, x_outs, L, ~] = ode_spmet_casadi(x,u,p);
+    [x_dot, x_outs, L, alg_states] = ode_spmet_casadi(x,u,p); % ZTG add 2019-6-17
     
     %% Setup Sensitivity Equations
 
     % Initial condition
     x0_call = Function('x0_call',{theta_sx},{x0_nom},{'params_sx'},{'result'});
     x0_init = full(x0_call(theta_0));
-    
-    % State I.C
-    x0 = full(x0_call(theta_0));
+    x0 = full(x0_call(theta_0)); % State I.C
     
     if SensFlag == 1
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,29 +139,33 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
     
     %% Build function for simulated states % [SHP Change]
     f_out = Function('f_out',{theta_sx,x,u},{x_outs},{'params_sx','x','u'},{'f_out'});
+    alg_out = Function('alg_out',{theta_sx,x,u},{alg_states},{'params_sx','x','u'},{'alg_out'}); % ZTG add 2019-6-17
     f0 = full(f_out(theta_0,x0,0));
+    a0 = full(alg_out(theta_0,x0,0));
 
      %% Indexing
 
     % index for x
     out_csn_idx = 1 : (p.Nr-1); % 1:29
     out_csp_idx = p.Nr : 2*(p.Nr-1); % 30:58
-    out_cex_idx = 2*p.Nr-1 :  2*p.Nr-1 + p.Nx-4; % 59:80
+    out_ce_idx = 2*p.Nr-1 :  2*p.Nr-1 + p.Nx-4; % 59:80
 %     out_T1_idx = (end-2) of x; % 81
 %     out_T2_idx = (end-1) of x;% 82
 %     out_dsei_idx = end of x
     
-    % index for other outputs
-%     out_cssn_idx = 1:p.Nxn-1 ;
-%     out_cssp_idx = (p.Nxn-1+1) : (p.Nxn-1 + p.Nxp-1);
-%     out_cex_idx = (p.Nxn-1 + p.Nxp-1 +1) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4));
-%     out_theta_avgn_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +1) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1));
-%     out_theta_avgp_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +1) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1));
-%     out_etan_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) +1) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1));
-%     out_etap_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) +1) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) + (p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1));
-%     out_ce0n_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +1) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +1);
-%     out_ce0p_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +2) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +2);
-%     out_etasLn_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +3) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +3);
+    % index for other internl state outputs
+%     alg_states = [c_ss_n; c_ss_p; c_ex; SOC_n; SOC_p; eta_n; eta_p; c_e0n; c_e0p; eta_s];
+
+    out_cssn_idx = 1;
+    out_cssp_idx = 2;
+    out_cex_idx = (2+1) : (p.Nxn + p.Nxs + p.Nxp-1 + 4); % check this index
+    out_SOCn_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1);
+    out_SOCp_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1 + 1);
+    out_etan_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1 + 1 + 1);
+    out_etap_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1 + 1 + 1 + 1);
+    out_ce0n_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1 + 1 + 1 + 1 + 1);
+    out_ce0p_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1 + 1 + 1 + 1 + 1 + 1);
+    out_etas_idx = ((p.Nxn + p.Nxs + p.Nxp-1 + 4) + 1 + 1 + 1 + 1 + 1 + 1 + 1);
 %     out_Volt_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +4) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +4);
 %     out_nLis_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +5) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +5);
 %     out_nLie_idx = (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +6) : (p.Nxn-1 + p.Nxp-1 + (p.Nxn-1+p.Nxs-1+p.Nxp-1 +4) +(p.Nxn-1) +(p.Nxp-1) + (p.Nxn-1) + (p.Nxp-1) +6);
@@ -160,8 +176,22 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
     T1_sim = zeros(NT,1);
     T2_sim = zeros(NT,1);
     delta_sei_sim = zeros(NT,1);
-    sens = zeros(NT,np);
-    S3_sim = zeros(np,NT);
+    
+    % pre-allocate other internal states
+    cssn_sim = zeros(NT,1);
+    cssp_sim = zeros(NT,1);
+    SOCn_sim = zeros(NT,1);
+    SOCp_sim = zeros(NT,1);
+    etan_sim = zeros(NT,1);
+    etap_sim = zeros(NT,1);
+    ce0n_sim = zeros(NT,1);
+    ce0p_sim = zeros(NT,1);
+    etas_sim = zeros(NT,1);
+            
+    if SensFlag  == 1
+        sens = zeros(NT,np);
+        S3_sim = zeros(np,NT); 
+    end
 
     % initialize
     x_sim(:,1) = x0;
@@ -170,10 +200,25 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
     % save x
     csn_sim(:,1) = f0(out_csn_idx);
     csp_sim(:,1) = f0(out_csp_idx);
-    cex_sim(:,1) = f0(out_cex_idx);
+    ce_sim(:,1) = f0(out_ce_idx);
     T1_sim(1) = f0(end-2);
     T2_sim(1) = f0(end-1);
     delta_sei_sim(1) = f0(end);
+    
+    % save other internal states
+    cssn_sim(1) = a0(out_cssn_idx);
+    cssp_sim(1) = a0(out_cssp_idx);
+    cex_sim(:,1) = a0(out_cex_idx);
+    SOCn_sim(1) = a0(out_SOCn_idx);
+    SOCp_sim(1) = a0(out_SOCp_idx);
+    etan_sim(1) = a0(out_etan_idx);
+    etap_sim(1) = a0(out_etap_idx);
+    ce0n_sim(1) = a0(out_ce0n_idx);
+    ce0p_sim(1) = a0(out_ce0p_idx);
+    etas_sim(1) = a0(out_etas_idx);
+%     volt_sim(:,1) = a0(out_Volt_idx);
+%     nLis_sim(:,1) = a0(out_nLis_idx);
+%     nLie_sim(:,1) = a0(out_nLie_idx);
     
     % Simulate SPMeT & Sensitivity Equations
     try
@@ -190,14 +235,30 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
             v_sim(k+1) = full(Fk.qf)/dt;
 
             f0 = full(f_out(theta_0,x_sim(:,k+1),Cur));
-
+            a0 = full(alg_out(theta_0,x_sim(:,k+1),Cur));
+            
             % save x
             csn_sim(:,k+1) = f0(out_csn_idx);
             csp_sim(:,k+1) = f0(out_csp_idx);
-            cex_sim(:,k+1) = f0(out_cex_idx);
+            ce_sim(:,k+1) = f0(out_ce_idx);
             T1_sim(k+1) = f0(end-2);
             T2_sim(k+1) = f0(end-1);
             delta_sei_sim(k+1) = f0(end);
+            
+            % Save other internal states
+            cssn_sim(k+1) = a0(out_cssn_idx);
+            cssp_sim(k+1) = a0(out_cssp_idx);
+            cex_sim(:,k+1) = a0(out_cex_idx);
+            SOCn_sim(k+1) = a0(out_SOCn_idx);
+            SOCp_sim(k+1) = a0(out_SOCp_idx);
+            etan_sim(k+1) = a0(out_etan_idx);
+            etap_sim(k+1) = a0(out_etap_idx);
+            ce0n_sim(k+1) = a0(out_ce0n_idx);
+            ce0p_sim(k+1) = a0(out_ce0p_idx);
+            etas_sim(k+1) = a0(out_etas_idx);
+%             volt_sim(:,1) = a0(out_Volt_idx);
+%             nLis_sim(:,1) = a0(out_nLis_idx);
+%             nLie_sim(:,1) = a0(out_nLie_idx);
 
             % Step SOC forward
         %     SOC(k+1) = (mean(c_avg_n(:,k+1)) - cn_low) / (cn_high - cn_low);
@@ -213,16 +274,18 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
             if v_sim(k+1) <= p.volt_min
                 fprintf('Min voltage is reached at %d iteration. Stopping simulation and concatenating data. \n',k);
                 v_sim = concatenate_data(v_sim);
+                state_info = [];
                 sens(1:length(S3_sim),:) = S3_sim'; 
-                alg_states = [];
+                varargout{1} = sens;
                 return
             end
 
             if v_sim(k+1) >= p.volt_max
                 fprintf('Max voltage is reached at %d iteration. Stopping simulation and concatenating data. \n',k);
                 v_sim = concatenate_data(v_sim);
+                state_info = [];
                 sens(1:length(S3_sim),:) = S3_sim';
-                alg_states = [];
+                varargout{1} = sens;
                 return 
             end
         end
@@ -230,114 +293,84 @@ function [v_sim,sens,alg_states] = spmet_casadi(data,theta_0,theta_sx,p,SensFlag
         errorMessage = sprintf('%s',getReport( e, 'extended', 'hyperlinks', 'on' ))
         fprintf('CasADi error. Stopping simulation and concatenating data. \n');
         v_sim = concatenate_data(v_sim);
+        state_info = [];
         sens(1:length(S3_sim),:) = S3_sim';   
-        
-        alg_states.csn_sim = csn_sim;
-        alg_states.csp_sim = csp_sim;
-        alg_states.cex_sim = cex_sim;
-        alg_states.T1_sim = T1_sim;
-        alg_states.T2_sim = T2_sim;
-        
-        save('casadi_debug.mat','v_sim','alg_states','sens','I', 't')
+        varargout{1} = sens;
+    
+%         % x info
+%         state_info.csn_sim = csn_sim;
+%         state_info.csp_sim = csp_sim;
+%         state_info.ce_sim = ce_sim;
+%         state_info.T1_sim = T1_sim;
+%         state_info.T2_sim = T2_sim;
+%         
+%         % Internal States
+%         state_info.cssn_sim = cssn_sim;
+%         state_info.cssp_sim = cssp_sim;
+%         state_info.cex_sim = cex_sim;
+%         state_info.SOCn_sim = SOCn_sim;
+%         state_info.SOCp_sim = SOCp_sim;
+%         state_info.etan_sim = etan_sim;
+%         state_info.etap_sim = etap_sim;
+%         state_info.ce0n_sim = ce0n_sim;
+%         state_info.ce0p_sim = ce0p_sim;
+%         state_info.etas_sim = etas_sim;
+%         
+%         save('casadi_debug.mat','v_sim','state_info','sens','I', 't')
         return
     end
 
-
-    %% Debug
-%     Voltage = data.V;
-% 
-%     %%% Compare DFN voltage to SPMeT
-%     figure
-%     hold on
-%     plot(v_sim(1:3500))
-%     plot(Voltage(1:3500))
-%     legend('DFN','SPMeT')
-%     fs = 25;
-%     set(gca,'Fontsize',fs)
-%     hold off
-% 
-%     %%% plot whole v_sim profile
-%     figure;plot(v_sim)
-%     title('Entire simulated SPMeT voltage profile')
-%     fs = 25;
-%     set(gca,'Fontsize',fs)  
-% 
-%     %%% plot current
-%     figure;plot(I)
-%     title('Current profile')
-%     fs = 25;
-%     set(gca,'Fontsize',fs)   
-% 
-%     %%% plot c_s_n
-%     figure;plot(csn_sim(end,:))
-%     title('c_s^-')
-%     fs = 25;
-%     set(gca,'Fontsize',fs) 
-%     
-%     %%% plot c_s_n
-%     figure;plot(csp_sim(end,:))
-%     title('c_s^+')
-%     fs = 25;
-%     set(gca,'Fontsize',fs) 
-%     
-%     %%% plot_c_e
-%     figure;plot(cex_sim(end,:))
-%     title('c_e')
-%     fs = 25;
-%     set(gca,'Fontsize',fs) 
-% 
-%     figure;plot(T1_sim)
-%     title('T_1')
-%     fs = 25;
-%     set(gca,'Fontsize',fs) 
-%     
-%     figure;plot(T2_sim)
-%     title('T_2')
-%     fs = 25;
-%     set(gca,'Fontsize',fs) 
-    
     %% Collect Outputs
-    sens = S3_sim';
+    if SensFlag == 1
+        % Provides sensitivity data / Jacobian to fmincon
+        sens = S3_sim';
+        varargout{1} = sens;
+    end
     
-    alg_states.csn_sim = csn_sim;
-    alg_states.csp_sim = csp_sim;
-    alg_states.cex_sim = cex_sim;
-    alg_states.T1_sim = T1_sim;
-    alg_states.T2_sim = T2_sim;
+    % save x info
+    state_info.csn_sim = csn_sim;
+    state_info.csp_sim = csp_sim;
+    state_info.ce_sim = ce_sim;
+    state_info.T1_sim = T1_sim;
+    state_info.T2_sim = T2_sim;
     
-    %     alg_states.phi_s_n_sim = phi_s_n_sim;
-    %     alg_states.phi_s_p_sim = phi_s_p_sim;
-    %     alg_states.ien_sim = ien_sim;
-    %     alg_states.iep_sim = iep_sim;
-    %     alg_states.phie_sim = phie_sim;
-    %     alg_states.jn_sim = jn_sim;
-    %     alg_states.jp_sim = jp_sim;
-    % alg_states.cssn_sim = cssn_sim;
-    % alg_states.cssp_sim = cssp_sim;
-    %     alg_states.cex_sim = cex_sim;
-    %     alg_states.theta_avgn_sim = theta_avgn_sim;
-    %     alg_states.theta_avgp_sim = theta_avgp_sim;
-    % alg_states.etan_sim = etan_sim;
-    % alg_states.etap_sim = etap_sim;
-    %     alg_states.ce0n_sim = ce0n_sim;
-    %     alg_states.ce0p_sim = ce0p_sim;
-    %     alg_states.etasLn_sim = etasLn_sim;
-    %     alg_states.volt_sim = volt_sim;
-    %     alg_states.nLis_sim = nLis_sim;
-    %     alg_states.nLie_sim = nLie_sim;
-    %     alg_states.SOC = SOC;
-    %     alg_states.p = p;
-    %     alg_states.Den0_sim = Den0_sim;
-    %     alg_states.dDen0_sim = dDen0_sim;
-    %     alg_states.Des0_sim = Des0_sim;
-    %     alg_states.dDes0_sim = dDes0_sim;
-    %     alg_states.Dep0_sim = Dep0_sim;
-    %     alg_states.dDep0_sim = dDep0_sim;
-    %     alg_states.cen_sim = cen_sim;
-    %     alg_states.ces_sim = ces_sim;
-    %     alg_states.cep_sim = cep_sim;
-
-    %% Use below to provide Jacobian to fmincon
-%     varargout{1} = S3;
+    % Internal States
+    state_info.cssn_sim = cssn_sim;
+    state_info.cssp_sim = cssp_sim;
+    state_info.cex_sim = cex_sim;
+    state_info.SOCn_sim = SOCn_sim;
+    state_info.SOCp_sim = SOCp_sim;
+    state_info.etan_sim = etan_sim;
+    state_info.etap_sim = etap_sim;
+    state_info.ce0n_sim = ce0n_sim;
+    state_info.ce0p_sim = ce0p_sim;
+    state_info.etas_sim = etas_sim;
+    %     state_info.ien_sim = ien_sim;
+    %     state_info.iep_sim = iep_sim;
+    %     state_info.phie_sim = phie_sim;
+    %     state_info.jn_sim = jn_sim;
+    %     state_info.jp_sim = jp_sim;
+    %     state_info.cex_sim = cex_sim;
+    %     state_info.theta_avgn_sim = theta_avgn_sim;
+    %     state_info.theta_avgp_sim = theta_avgp_sim;
+    % state_info.etan_sim = etan_sim;
+    % state_info.etap_sim = etap_sim;
+    %     state_info.ce0n_sim = ce0n_sim;
+    %     state_info.ce0p_sim = ce0p_sim;
+    %     state_info.etasLn_sim = etasLn_sim;
+    %     state_info.volt_sim = volt_sim;
+    %     state_info.nLis_sim = nLis_sim;
+    %     state_info.nLie_sim = nLie_sim;
+    %     state_info.SOC = SOC;
+    %     state_info.p = p;
+    %     state_info.Den0_sim = Den0_sim;
+    %     state_info.dDen0_sim = dDen0_sim;
+    %     state_info.Des0_sim = Des0_sim;
+    %     state_info.dDes0_sim = dDes0_sim;
+    %     state_info.Dep0_sim = Dep0_sim;
+    %     state_info.dDep0_sim = dDep0_sim;
+    %     state_info.cen_sim = cen_sim;
+    %     state_info.ces_sim = ces_sim;
+    %     state_info.cep_sim = cep_sim;
 end
     

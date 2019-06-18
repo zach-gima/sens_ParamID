@@ -1,5 +1,5 @@
  %% Script for generating CCCV Charging Profiles for a Given Battery Chemistry via a PI Loop implementation
-% By: Zach Gima 2019-5-22
+% By: Zach Gima
 
 % % % Current | Positive <=> Discharge, Negative <=> Charge
 clearvars
@@ -62,7 +62,6 @@ while k < 3 || abs(I(k)) > abs(I_chrgcutoff)
     % Simulate Voltage from Model
     [~,V(k+1)] = ode_spmet(x0_nom,Cur,p);
     V0 = V(k+1); %update voltage used to initialize states at next time step
-        
     
     %% PI w/ Anti-Windup Routine
     % Adopted from Aström, Feedback Systems
@@ -84,16 +83,16 @@ while k < 3 || abs(I(k)) > abs(I_chrgcutoff)
     
     % Update Integral Term:
     % controller-actuator error: 0 when no saturation
-%     err_sat = I(k+1) - I_ctrl;  
-%     Int = Int + Ki*err_V + Kt*err_sat;
-%     
-%     % Debug variables
+    err_sat = I(k+1) - I_ctrl;  
+    Int = Int + Ki*err_V + Kt*err_sat;
+    
+    % Debug variables
 %     err_V_track(k,1) = err_V; %debug
 %     err_sat_track(k,1) = err_sat; %debug
 %     Int_track(k,1) = Int; %debug
 %     Prop_track(k,1) = Prop; %debug
     
-%     %%% Discrete velocity form
+    %%% Discrete velocity form
 %     delta_I = -(Kp*(1+dt/T_i)*err_new - Ki*err_old);
 %     I(k+1) = I(k) + delta_I;
 %     I(k+1) = max(I(k+1),I_chrgmax); % bound the max current; here use max instead of min because charge current is (-)

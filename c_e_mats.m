@@ -2,7 +2,10 @@
 %   Created June 19, 2015 by Scott Moura
 %   A complete reboot of the original c_e_mats from July 2011
 
-function [M1n,M2n,M3n,M4n,M5n, M1s,M2s,M3s,M4s, M1p,M2p,M3p,M4p,M5p, C_ce] = c_e_mats(p)
+% ZTG Note 2019-6-14: Added SensFlag argument -- If simulating the model w/
+% CasADI and identifying parameters, you need to change the variable type
+% for a few of the boundary condition matrices to the CasADi SX variable
+function [M1n,M2n,M3n,M4n,M5n, M1s,M2s,M3s,M4s, M1p,M2p,M3p,M4p,M5p, C_ce] = c_e_mats(p,SensFlag)
 
 import casadi.*
 
@@ -57,10 +60,14 @@ M5n = (1-p.t_plus)*p.a_s_n/p.epsilon_e_n * speye(p.Nxn-1);
 M5p = (1-p.t_plus)*p.a_s_p/p.epsilon_e_p * speye(p.Nxp-1);
 
 %% Boundary Conditions
-% N1 = zeros(4,p.Nx-3); % CASADI CHANGE
-N1 = SX.zeros(4,p.Nx-3);
-% N2 = zeros(4); % CASADI CHANGE
-N2 = SX.zeros(4,4);
+if SensFlag == 1
+    N1 = SX.zeros(4,p.Nx-3); % CASADI CHANGE
+    N2 = SX.zeros(4,4); % CASADI CHANGE
+else
+    N1 = zeros(4,p.Nx-3); 
+    N2 = zeros(4);
+end
+
 
 % BC1
 N1(1,1) = +4;
@@ -88,7 +95,10 @@ N1(4,end) = -4;
 N2(4,4) = +3;
 
 %%% SPARSE OUTPUT 
-% C_ce = sparse(-N2\N1); % CASADI CHANGE
+if SensFlag == 1 % CASADI CHANGE
+    inv_N2 = solve(N2,SX.eye(N2.size1())); 
+    C_ce = -inv_N2*N1;
+else
+    C_ce = sparse(-N2\N1); 
+end
 
-inv_N2 = solve(N2,SX.eye(N2.size1()));
-C_ce = -inv_N2*N1;

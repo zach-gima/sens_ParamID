@@ -1,6 +1,6 @@
 %% Function to update parameters that are functions of other parameter values
 % By: Zach Gima 2019-5-17
-function p = update_dependencies(p)
+function p = update_dependencies(p,SensFlag)
 
     % make element to caclulate phi_{s} by Saehong Park 
     p.epsilon_f_n = 1 - p.epsilon_s_n - p.epsilon_e_n;  % Volume fraction of filler in neg. electrode
@@ -12,5 +12,5 @@ function p = update_dependencies(p)
     
     % Electrolyte concentration matrices: These are parameter dependent so need to re-generate everytime we
     % change the parameters
-    p = update_c_e_mats(p);
+    p = update_c_e_mats(p,SensFlag);
 end
