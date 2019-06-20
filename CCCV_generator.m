@@ -20,7 +20,7 @@ T_amb = 25;
 V_max = 4; %V
 
 capacity = 2900; %mAh
-C_rate = 0.5; %[-]
+C_rate = 0.25; %[-]
 I_chrgmax = -capacity*C_rate/1000; %A
 I_chrgcutoff = -0.01; %A i.e. 5mA cutoff
 
@@ -52,6 +52,23 @@ Cur = I(1); %I(2);
 % err_old = 0;
 % err_history = zeros(2,1);
 % err_history(1) = 0;
+
+
+%% CC Portion
+% while V(k) < V_max
+%     [p,x0_nom] = init_spmet_nocasadi(p,V0,T_amb,0);  % generate initial conditions for spmet & load inputs, parameters
+%     
+%     % Simulate Voltage from Model
+%     [~,V(k+1)] = ode_spmet(x0_nom,Cur,p);
+%     V0 = V(k+1);
+% 
+%     % Rail Current at Max
+%     I(k+1) = I_chrgmax;
+%     
+%     % Update k and Cur
+%     Cur = I(k+1);
+%     k = k + 1;
+% end
 
 % Determine Current Trajectory until Cutoff Current reached
 while k < 3 || abs(I(k)) > abs(I_chrgcutoff) 
@@ -86,7 +103,7 @@ while k < 3 || abs(I(k)) > abs(I_chrgcutoff)
     err_sat = I(k+1) - I_ctrl;  
     Int = Int + Ki*err_V + Kt*err_sat;
     
-    % Debug variables
+    %%% Debug variables
 %     err_V_track(k,1) = err_V; %debug
 %     err_sat_track(k,1) = err_sat; %debug
 %     Int_track(k,1) = Int; %debug
@@ -173,7 +190,14 @@ xlabel('Time (s)')
 ylabel('Voltage (V)')
 set(gca,'Fontsize',fs)
 
-% Debugging plots
+%% Save in format for online paramID
+Current = I;
+Time = time;
+Voltage = V;
+
+save('1C_CCCV-chrg_PI','Current','Time','Voltage','T_amb')
+
+%% Debugging plots
 %%% errors
 % figure('Position', [100 100 900 700])
 % subplot(3,1,1)
