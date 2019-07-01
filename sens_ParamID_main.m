@@ -16,6 +16,8 @@ addpath('/Users/ztakeo/Documents/MATLAB/casadi') % Mac Laptop
 % addpath('/global/home/users/ztakeo/modules/casadi-matlab');    % For Savio
 
 %% instantiate global variables that will track iterations within fmincon & optimization options object
+global function_evals
+function_evals = 0; % variable for tracking total number of function evaluations by fmincon
 global history;
 global searchdir;
 history.x = [];
@@ -36,7 +38,7 @@ run param/params_bounds
 
 %%% Set input/output paths & load data
 baseline = 'C'; %'C'; %'B' 'C'
-data_select_logic = 1; % 1 for selecting data according to sensitivity content
+data_select_logic = 0; % 1 for selecting data according to sensitivity content
 soc_0 = 'SOC60'; %SOC#
 input_folder = strcat('input-data/SPMeT/',soc_0,'/');
 % input_filename = 'US06x3_batt_ObsData.mat';
@@ -97,6 +99,7 @@ datetime_final = cell(ID_p.num_batches,1);
 fprintf('\n')
 disp('*********BEGINNING PARAMETER ID ROUTINE*********')
 fprintf('Baseline %s \n',baseline)
+fprintf('Data selection: %i \n', data_select_logic)
 fprintf('Start Time: %s \n \n',datetime_initial);
 tic
 
@@ -110,15 +113,23 @@ for batch_idx = 1:ID_p.num_batches
     % Used for event_select
     V_sim_initial = cell(ID_p.num_events,1);
     sens_initial = cell(ID_p.num_events,1);
-    state_info_initial = cell(ID_p.num_events,1);
+    states_initial = cell(ID_p.num_events,1);
     
     % Simulate model for Voltage, Sensitivity
     % parfor loops don't behave well with structures; assign temp variable
     theta_guess_initial = theta.guess; 
     theta_str_initial = theta.str;
     
-    for ii = 1:ID_p.num_events
-        [V_sim_initial{ii},state_info_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
+    parfor ii = 1:ID_p.num_events
+        [V_sim_initial{ii},states_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
+        
+%         Current = data(ii).cur;
+%         T_amb = data(ii).T_amb;
+%         Time = data(ii).time;
+%         Voltage = data(ii).V_exp;
+%         States = states_initial{ii};
+%         
+%         save(data(ii).cycle_name,'Current','T_amb','Time','Voltage','States')
     end
     clear theta_guess_initial theta_str_initial
     
@@ -127,7 +138,6 @@ for batch_idx = 1:ID_p.num_batches
     for ii = 1:ID_p.num_events
         data(ii).V_sim_initial = V_sim_initial{ii};
         data(ii).sens_initial = sens_initial{ii};
-
         %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
         %%% normalize_sens_factor -- should this factor update with
         %%% parameter updates?
@@ -135,7 +145,7 @@ for batch_idx = 1:ID_p.num_batches
     end
 
     % Debugging -- save data so don't have to regenerate every time
-    save(strcat(output_folder,date_txt,'_initial_sim'),'data','STS_norm_initial','state_info_initial');
+%     save(strcat(output_folder,date_txt,'_initial_sim'),'data','STS_norm_initial','states_initial');
 %     load('initial_sim.mat');
 
     %% Select events
@@ -172,16 +182,16 @@ for batch_idx = 1:ID_p.num_batches
     end
            
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   DEBUG   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     figure('Position', [100 100 900 700])
-%     plot(opt_data(1).V_exp,'LineWidth', 2.5);
-%     hold on
-%     plot(opt_data(1).V_sim_initial,'LineWidth', 2.5);
-%     hold off
-%     xlabel('Time (s)')
-%     ylabel('Voltage (V)')
-%     title('Initial Fit')
-%     legend('Truth Data','Simulated Data')
-%     set(gca,'Fontsize',fs)
+    figure('Position', [100 100 900 700])
+    plot(opt_data(1).V_exp,'LineWidth', 2.5);
+    hold on
+    plot(opt_data(1).V_sim_initial,'LineWidth', 2.5);
+    hold off
+    xlabel('Time (s)')
+    ylabel('Voltage (V)')
+    title('Initial Fit')
+    legend('Truth Data','Simulated Data')
+    set(gca,'Fontsize',fs)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   DEBUG   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Identify Parameters
     % Print Initial Cost Function Eval
@@ -218,22 +228,25 @@ for batch_idx = 1:ID_p.num_batches
     theta.history(current_params_idx,batch_idx+1) = theta_ID;
     
     %% re-simulate model for the final parameter set identified: need updated voltage profile and sens data for Conf. Int.
-    V_sim = cell(ID_p.num_events,1);
-    state_info = cell(ID_p.num_events,1);
-    sens = cell(ID_p.num_events,1);
+    V_sim_final = cell(ID_p.num_events,1);
+    states_final = cell(ID_p.num_events,1);
+    sens_final = cell(ID_p.num_events,1);
     
     % create temp params to pass to spmet_casadi
     theta_guess_current =  theta.guess(current_params_idx);
     theta_str_current = theta.str(current_params_idx);
     
     parfor ii = 1:ID_p.num_events
-        [V_sim{ii},state_info{ii},sens{ii}] = spmet_casadi(p,data(ii),theta_guess_current,theta_str_current);
+        [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_guess_current,theta_str_current);
     end
     
     %% save current batch data
-    ID_out.V_sim = V_sim;
-    ID_out.state_info = state_info;
-    ID_out.sens = sens;
+    ID_out.V_sim_initial = V_sim_initial;
+    ID_out.V_sim_final = V_sim_final;
+    ID_out.states_initial = states_initial;
+    ID_out.states_final = states_final;
+    ID_out.sens_final = sens_final;
+    
     ID_out.data = data;
     ID_out.params_final_idx = paramID_idx;
     ID_out.opt_event_idx = opt_event_idx;
@@ -247,6 +260,7 @@ for batch_idx = 1:ID_p.num_batches
     ID_out.fmincon_exitflag = EXITFLAG;
     ID_out.fmincon_history = history;
     ID_out.fmincon_searchdir = searchdir;
+    ID_out.fmincon_f_evals = function_evals;
     
     save(strcat(output_path,'_batch_',num2str(batch_idx)),'ID_out')
     clear ID_out

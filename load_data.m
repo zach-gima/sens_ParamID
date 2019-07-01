@@ -31,7 +31,7 @@ function data = load_data(p,input_folder)
     for ii = 1:num_inputs
         input_filename = input_files(ii).name;
 
-        load(strcat(input_folder,input_filename),'Time','Current','Voltage','T_amb')
+        load(strcat(input_folder,input_filename),'Time','Current','Voltage','T_amb','States')
 
         % See if Rc value loaded/specified for the input profile being loaded;
         % otherwise do nothing
@@ -47,11 +47,12 @@ function data = load_data(p,input_folder)
         data(ii).V_exp = Voltage;
         data(ii).V0 = Voltage(1);
         data(ii).T_amb = T_amb;
+        data(ii).states_true = States;
 
         % % % Current | Positive <=> Discharge, Negative <=> Charge
         % % % Opposite convention outside the models
         data(ii).cur = Current; % not normalized by electrode area for SPMeT (but is for DFN)
         
-        clear Time Voltage T_amb Current
+        clear Time Voltage T_amb Current States
     end
 end

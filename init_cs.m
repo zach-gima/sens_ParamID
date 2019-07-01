@@ -15,7 +15,9 @@ f = nan*ones(maxiters,1);
 tol = 1e-5;
 
 % Initial Guesses
-load('NCA_SOC_OCV_MAP.mat');
+S = load('NCA_SOC_OCV_MAP.mat'); % ZTG Note simulink change
+flip_volt = S.flip_volt;
+soc1 = S.soc1;
 [flipVolt, index] = unique(flip_volt);
 soc00 = interp1(flipVolt,soc1(index),V0,'spline');
 csn0 = 34265*(soc00) + 44.5;

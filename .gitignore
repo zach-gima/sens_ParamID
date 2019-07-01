@@ -2,3 +2,4 @@
 *.DS_Store
 output-data/
 trash/
+plots/

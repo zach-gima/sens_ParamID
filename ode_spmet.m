@@ -1,4 +1,4 @@
-%% ODEs for SPMeT Model
+%% ODEs for SPMeT Model 
 %   Created December 18, 2016 by Scott Moura
 %   Called by spmet.m
 
@@ -58,7 +58,6 @@ c_en = c_e(1:(p.Nxn-1));
 c_es = c_e((p.Nxn-1)+1:(p.Nxn-1)+(p.Nxs-1));
 c_ep = c_e((p.Nxn-1)+p.Nxs : end);
 c_ex = [ce0n; c_en; cens; c_es; cesp; c_ep; ce0p];
-
 
 %% Voltage output
 
