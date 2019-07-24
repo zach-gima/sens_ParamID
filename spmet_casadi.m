@@ -238,7 +238,7 @@ function [v_sim,state_info,varargout] = spmet_casadi(p,data,varargin)
 
             f0 = full(f_out(theta_0,x_sim(:,k+1),Cur));
             a0 = full(alg_out(theta_0,x_sim(:,k+1),Cur));
-            
+                        
             % save x
             csn_sim(:,k+1) = f0(out_csn_idx);
             csp_sim(:,k+1) = f0(out_csp_idx);

@@ -44,10 +44,11 @@ function data = load_data(p,input_folder)
         % Data structure with time,current, initial condition
         data(ii).cycle_name = input_filename;
         data(ii).time = Time;
-        data(ii).V_exp = Voltage;
-        data(ii).V0 = Voltage(1);
+%         data(ii).V_exp = Voltage;
+%         data(ii).V0 = Voltage(1);
+        data(ii).V0 = 3.768907470798727; % SOC = 60%; ZTG CHANGE 2019-7-22 COME BACK AND ALTER IF CHANGING INITIAL SOC
         data(ii).T_amb = T_amb;
-        data(ii).states_true = States;
+%         data(ii).states_true = States;
 
         % % % Current | Positive <=> Discharge, Negative <=> Charge
         % % % Opposite convention outside the models

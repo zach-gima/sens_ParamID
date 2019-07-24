@@ -37,7 +37,7 @@ run param/params_bounds
 % run param/params_LCO % loads p struct
 
 %%% Set input/output paths & load data
-baseline = 'C'; %'C'; %'B' 'C'
+baseline = 'A'; %'C'; %'B' 'C'
 data_select_logic = 0; % 1 for selecting data according to sensitivity content
 soc_0 = 'SOC60'; %SOC#
 input_folder = strcat('input-data/SPMeT/',soc_0,'/');
@@ -57,7 +57,7 @@ diary(error_filename)
 ID_p = struct(); 
 ID_p.num_events = length(data);
 ID_p.event_budget = 3; % batch budget
-ID_p.num_batches = 1; % num batches; batches are made of events
+ID_p.num_batches = 5; % num batches; batches are made of events
 ID_p.collinearity_thresh = 0.7;
 
 %%% Set Model Discretization Parameters
@@ -75,20 +75,15 @@ p = set_discretization(p);
 
 % Specify parameters to be identified -- make sure each theta_ variable specifies the parameters
 % in the same order
-perturb_factor = 1.3;
-theta.truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
-theta.guess = perturb_factor*theta.truth;
+perturb_factor_initial = 1.3;
+perturb_factor_batch = 1.05; % each batch move parameters 5%
+theta(ID_p.num_batches) = struct();
+theta(1).truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
+theta(1).guess = perturb_factor_initial*theta(1).truth;
 
-ID_p.np = length(theta.guess);
+ID_p.np = length(theta(1).guess);
 params_all_idx = (1:ID_p.np)'; % vector of indices for all parameters, used for initial model simulation
 
-theta.history = zeros(ID_p.np,ID_p.num_batches+1); % array used to track identified values for each parameter over all of the batches
-theta.history(:,1) = theta.guess;
-theta.char = {'R_s^+';'ElecFactorDA';horzcat(char(949),'_e^-');'t_+';'R_f^-';'R_f^+'}; % char version of the params, used for plotting/fprintf purposes
-theta.str = {'R_s_p';'ElecFactorDA';'epsilon_e_n';'t_plus';'R_f_n';'R_f_p'}; % exact names of the p struct fields, used for updating parameter values
-
-% update p struct with initial guess
-p = update_p_struct(p,theta.guess,theta.str);
 
 %% Run ParamID routine
 % Initialize variables
@@ -109,6 +104,31 @@ for batch_idx = 1:ID_p.num_batches
     fprintf('Batch #%i \n',batch_idx)
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     
+    %% Setup parameter structure for this batch
+    theta(batch_idx).history = zeros(ID_p.np,ID_p.num_batches+1); % array used to track identified values for each parameter over all of the batches
+    theta(batch_idx).history(:,1) = theta(batch_idx).guess;
+    theta(batch_idx).char = {'R_s^+';'ElecFactorDA';horzcat(char(949),'_e^-');'t_+';'R_f^-';'R_f^+'}; % char version of the params, used for plotting/fprintf purposes
+    theta(batch_idx).str = {'R_s_p';'ElecFactorDA';'epsilon_e_n';'t_plus';'R_f_n';'R_f_p'}; % exact names of the p struct fields, used for updating parameter values
+
+    % update p struct with initial guess
+    p = update_p_struct(p,theta(batch_idx).guess,theta(batch_idx).str);
+    
+    %% Simulate SPMeT for truth parameters
+    % need to do this if changing truth parameters each batch
+    theta_truth_current = theta(batch_idx).truth;
+    p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
+
+    parfor mm = 1:ID_p.num_events
+        [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm))
+    end
+    
+    % store data
+    for jj = 1:ID_p.num_events
+        data(jj).V_exp = V_true{jj};
+        data(jj).V0 = V_true{jj}(1);
+        data(jj).states_true = States_true{jj};
+    end
+
     %% Simulate SPMeT for initial parameter guess: voltage, sensitivity
     % Used for event_select
     V_sim_initial = cell(ID_p.num_events,1);
@@ -117,19 +137,12 @@ for batch_idx = 1:ID_p.num_batches
     
     % Simulate model for Voltage, Sensitivity
     % parfor loops don't behave well with structures; assign temp variable
-    theta_guess_initial = theta.guess; 
-    theta_str_initial = theta.str;
+    theta_guess_initial = theta(batch_idx).guess; 
+    theta_str_initial = theta(batch_idx).str;
     
     parfor ii = 1:ID_p.num_events
         [V_sim_initial{ii},states_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
         
-%         Current = data(ii).cur;
-%         T_amb = data(ii).T_amb;
-%         Time = data(ii).time;
-%         Voltage = data(ii).V_exp;
-%         States = states_initial{ii};
-%         
-%         save(data(ii).cycle_name,'Current','T_amb','Time','Voltage','States')
     end
     clear theta_guess_initial theta_str_initial
     
@@ -176,22 +189,22 @@ for batch_idx = 1:ID_p.num_batches
         paramID_idx{batch_idx} = (1:ID_p.np)';
     % Baseline B and C
     elseif strcmp('B',baseline) || strcmp('C',baseline)
-        [paramID_idx{batch_idx}] = param_remove(sens_data(batch_idx),ID_p,theta.char);
+        [paramID_idx{batch_idx}] = param_remove(sens_data(batch_idx),ID_p,theta(batch_idx).char);
     else
         error('Baseline improperly specified. Set baseline = ''A'',''B'', or ''C'' ')
     end
            
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   DEBUG   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    figure('Position', [100 100 900 700])
-    plot(opt_data(1).V_exp,'LineWidth', 2.5);
-    hold on
-    plot(opt_data(1).V_sim_initial,'LineWidth', 2.5);
-    hold off
-    xlabel('Time (s)')
-    ylabel('Voltage (V)')
-    title('Initial Fit')
-    legend('Truth Data','Simulated Data')
-    set(gca,'Fontsize',fs)
+%     figure('Position', [100 100 900 700])
+%     plot(opt_data(1).V_exp,'LineWidth', 2.5);
+%     hold on
+%     plot(opt_data(1).V_sim_initial,'LineWidth', 2.5);
+%     hold off
+%     xlabel('Time (s)')
+%     ylabel('Voltage (V)')
+%     title('Initial Fit')
+%     legend('Truth Data','Simulated Data')
+%     set(gca,'Fontsize',fs)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   DEBUG   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Identify Parameters
     % Print Initial Cost Function Eval
@@ -205,8 +218,8 @@ for batch_idx = 1:ID_p.num_batches
     current_params_idx = paramID_idx{batch_idx};
     lb = bounds.min(current_params_idx);
     ub = bounds.max(current_params_idx);    
-    theta_guess_current = theta.guess(current_params_idx);
-    theta_str_current = theta.str(current_params_idx);
+    theta_guess_current = theta(batch_idx).guess(current_params_idx);
+    theta_str_current = theta(batch_idx).str(current_params_idx);
     
     % create anonymous function to pass in other parameters needed for V_obj
     fh = @(x)V_obj(x,opt_data,theta_str_current,p);
@@ -223,9 +236,9 @@ for batch_idx = 1:ID_p.num_batches
     p = update_p_struct(p,theta_ID,theta_str_current);
     
     % Store identified values & update guess for next event
-    theta.guess(current_params_idx) = theta_ID;
-    theta.history(:,batch_idx+1) = theta.history(:,batch_idx); % for parameters not identified this batch, this stores the previous value (i.e. it stays constant)
-    theta.history(current_params_idx,batch_idx+1) = theta_ID;
+    theta(batch_idx).guess(current_params_idx) = theta_ID;
+    theta(batch_idx).history(:,batch_idx+1) = theta(batch_idx).history(:,batch_idx); % for parameters not identified this batch, this stores the previous value (i.e. it stays constant)
+    theta(batch_idx).history(current_params_idx,batch_idx+1) = theta_ID;
     
     %% re-simulate model for the final parameter set identified: need updated voltage profile and sens data for Conf. Int.
     V_sim_final = cell(ID_p.num_events,1);
@@ -233,8 +246,8 @@ for batch_idx = 1:ID_p.num_batches
     sens_final = cell(ID_p.num_events,1);
     
     % create temp params to pass to spmet_casadi
-    theta_guess_current =  theta.guess(current_params_idx);
-    theta_str_current = theta.str(current_params_idx);
+    theta_guess_current =  theta(batch_idx).guess(current_params_idx);
+    theta_str_current = theta(batch_idx).str(current_params_idx);
     
     parfor ii = 1:ID_p.num_events
         [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_guess_current,theta_str_current);
@@ -253,8 +266,8 @@ for batch_idx = 1:ID_p.num_batches
     ID_out.datetime_initial = datetime_initial;
     ID_out.datetime_final = datetime_final;
     ID_out.wallclock = wallclock;
-    ID_out.theta = theta;
-    ID_out.perturb_factor = perturb_factor;
+    ID_out.theta = theta(batch_idx);
+    ID_out.perturb_factor = perturb_factor_initial;
     ID_out.fmincon_out = OUTPUT;
     ID_out.fmincon_fval = FVAL;
     ID_out.fmincon_exitflag = EXITFLAG;
@@ -264,6 +277,10 @@ for batch_idx = 1:ID_p.num_batches
     
     save(strcat(output_path,'_batch_',num2str(batch_idx)),'ID_out')
     clear ID_out
+
+    
+    %% Update truth params & simulate new "truth" voltage data
+    theta(batch_idx+1).truth = perturb_factor_batch*theta(batch_idx).truth;
 
 end
 
