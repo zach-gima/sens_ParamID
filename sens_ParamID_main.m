@@ -10,7 +10,7 @@ fs = 25;
 datetime_initial = datetime('now','TimeZone','America/Los_Angeles');
 date_txt = strrep(datestr(datetime_initial), ':', '_');
 
-addpath('/Users/ztakeo/Documents/MATLAB/casadi') % Mac Laptop
+% addpath('/Users/ztakeo/Documents/MATLAB/casadi') % Mac Laptop
 % addpath('C:/Users/Zach/Documents/MATLAB/casadi_windows') % HPC-1
 % addpath('C:/Users/zgima/Documents/MATLAB/casadi_windows') % HPC-2
 % addpath('/global/home/users/ztakeo/modules/casadi-matlab');    % For Savio
@@ -80,6 +80,7 @@ perturb_factor_batch = 1.05; % each batch move parameters 5%
 theta(ID_p.num_batches) = struct();
 theta(1).truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
 theta(1).guess = perturb_factor_initial*theta(1).truth;
+theta(1).final_ID = theta(1).guess; % initialize the final ID as the guess value; parameters selected to be ID'ed will overwrite their corresponding index later
 
 ID_p.np = length(theta(1).guess);
 params_all_idx = (1:ID_p.np)'; % vector of indices for all parameters, used for initial model simulation
@@ -99,17 +100,15 @@ fprintf('Start Time: %s \n \n',datetime_initial);
 tic
 
 for batch_idx = 1:ID_p.num_batches
-    
+
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     fprintf('Batch #%i \n',batch_idx)
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     
     %% Setup parameter structure for this batch
-    theta(batch_idx).history = zeros(ID_p.np,ID_p.num_batches+1); % array used to track identified values for each parameter over all of the batches
-    theta(batch_idx).history(:,1) = theta(batch_idx).guess;
     theta(batch_idx).char = {'R_s^+';'ElecFactorDA';horzcat(char(949),'_e^-');'t_+';'R_f^-';'R_f^+'}; % char version of the params, used for plotting/fprintf purposes
     theta(batch_idx).str = {'R_s_p';'ElecFactorDA';'epsilon_e_n';'t_plus';'R_f_n';'R_f_p'}; % exact names of the p struct fields, used for updating parameter values
-
+    
     % update p struct with initial guess
     p = update_p_struct(p,theta(batch_idx).guess,theta(batch_idx).str);
     
@@ -118,6 +117,9 @@ for batch_idx = 1:ID_p.num_batches
     theta_truth_current = theta(batch_idx).truth;
     p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
 
+    disp('%%%%%%%%%%%%%')
+    disp('Simulating truth data')
+    disp('%%%%%%%%%%%%%')
     parfor mm = 1:ID_p.num_events
         [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm))
     end
@@ -138,11 +140,13 @@ for batch_idx = 1:ID_p.num_batches
     % Simulate model for Voltage, Sensitivity
     % parfor loops don't behave well with structures; assign temp variable
     theta_guess_initial = theta(batch_idx).guess; 
-    theta_str_initial = theta(batch_idx).str;
+    theta_str_initial = theta(batch_idx).str; % initially pass in all variables because we haven't decided yet which params to ID
     
+    disp('%%%%%%%%%%%%%')
+    disp('Simulating for initial parameter guess')
+    disp('%%%%%%%%%%%%%')
     parfor ii = 1:ID_p.num_events
         [V_sim_initial{ii},states_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
-        
     end
     clear theta_guess_initial theta_str_initial
     
@@ -174,7 +178,6 @@ for batch_idx = 1:ID_p.num_batches
 
     %% Compute additional sensitivity data needed for parameter collinearty + sensitivity analysis
     % Compute other sensitivity information for the concatenated sens data
-
     sens_data(batch_idx).sens = vertcat(opt_data.sens_initial); 
 
     [STS_norm,STS_norm_diag,corr_coeff_matrix] = compute_sens_variables(p,bounds,sens_data(batch_idx).sens);
@@ -224,6 +227,9 @@ for batch_idx = 1:ID_p.num_batches
     % create anonymous function to pass in other parameters needed for V_obj
     fh = @(x)V_obj(x,opt_data,theta_str_current,p);
     
+    disp('%%%%%%%%%%%%%')
+    disp('Identifying parameters')
+    disp('%%%%%%%%%%%%%')
     [theta_ID,FVAL,EXITFLAG,OUTPUT,LAMBDA,GRAD,HESSIAN]= ...
        fmincon(fh,theta_guess_current,[],[],[],[],lb,ub,[],opt);
 
@@ -235,10 +241,10 @@ for batch_idx = 1:ID_p.num_batches
     % Update p struct with newly ID'ed values
     p = update_p_struct(p,theta_ID,theta_str_current);
     
-    % Store identified values & update guess for next event
-    theta(batch_idx).guess(current_params_idx) = theta_ID;
-    theta(batch_idx).history(:,batch_idx+1) = theta(batch_idx).history(:,batch_idx); % for parameters not identified this batch, this stores the previous value (i.e. it stays constant)
-    theta(batch_idx).history(current_params_idx,batch_idx+1) = theta_ID;
+    % Store identified values
+    theta(batch_idx).final_ID(current_params_idx) = theta_ID;
+    
+    clear theta_guess_current theta_str_current
     
     %% re-simulate model for the final parameter set identified: need updated voltage profile and sens data for Conf. Int.
     V_sim_final = cell(ID_p.num_events,1);
@@ -246,12 +252,18 @@ for batch_idx = 1:ID_p.num_batches
     sens_final = cell(ID_p.num_events,1);
     
     % create temp params to pass to spmet_casadi
-    theta_guess_current =  theta(batch_idx).guess(current_params_idx);
-    theta_str_current = theta(batch_idx).str(current_params_idx);
+    %%%%%% ZTG NOTE: CHECK THIS MAY NOT BE BUG FREE
+    theta_ID_final =  theta(batch_idx).final_ID(current_params_idx);
+    theta_str_final = theta(batch_idx).str(current_params_idx);
     
+    disp('%%%%%%%%%%%%%')
+    disp('Re-simulating model for final parameter values')
+    disp('%%%%%%%%%%%%%')
     parfor ii = 1:ID_p.num_events
-        [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_guess_current,theta_str_current);
+        [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_ID_final,theta_str_final);
     end
+    
+    clear theta_ID_final theta_str_final
     
     %% save current batch data
     ID_out.V_sim_initial = V_sim_initial;
@@ -278,10 +290,12 @@ for batch_idx = 1:ID_p.num_batches
     save(strcat(output_path,'_batch_',num2str(batch_idx)),'ID_out')
     clear ID_out
 
-    
-    %% Update truth params & simulate new "truth" voltage data
-    theta(batch_idx+1).truth = perturb_factor_batch*theta(batch_idx).truth;
-
+    %% Update truth params, guess, and final_ID vector for next batch
+    if batch_idx < ID_p.num_batches
+        theta(batch_idx+1).guess = theta(batch_idx).final_ID;
+        theta(batch_idx+1).final_ID = theta(batch_idx+1).guess;
+        theta(batch_idx+1).truth = perturb_factor_batch*theta(batch_idx).truth;
+    end
 end
 
 diary off
