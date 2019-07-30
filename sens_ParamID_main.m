@@ -16,8 +16,6 @@ date_txt = strrep(datestr(datetime_initial), ':', '_');
 % addpath('/global/home/users/ztakeo/modules/casadi-matlab');    % For Savio
 
 %% instantiate global variables that will track iterations within fmincon & optimization options object
-global function_evals
-function_evals = 0; % variable for tracking total number of function evaluations by fmincon
 global history;
 global searchdir;
 history.x = [];
@@ -158,7 +156,7 @@ for batch_idx = 1:ID_p.num_batches
         %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
         %%% normalize_sens_factor -- should this factor update with
         %%% parameter updates?
-        [STS_norm_initial{ii},~,~] = compute_sens_variables(p,bounds,sens_initial{ii});
+        [STS_norm_initial{ii},~,~] = compute_sens_variables(p,p_bounds,sens_initial{ii});
     end
 
     % Debugging -- save data so don't have to regenerate every time
@@ -180,7 +178,7 @@ for batch_idx = 1:ID_p.num_batches
     % Compute other sensitivity information for the concatenated sens data
     sens_data(batch_idx).sens = vertcat(opt_data.sens_initial); 
 
-    [STS_norm,STS_norm_diag,corr_coeff_matrix] = compute_sens_variables(p,bounds,sens_data(batch_idx).sens);
+    [STS_norm,STS_norm_diag,corr_coeff_matrix] = compute_sens_variables(p,p_bounds,sens_data(batch_idx).sens);
     sens_data(batch_idx).STS_norm = STS_norm;
     sens_data(batch_idx).STS_norm_diag = STS_norm_diag;
     sens_data(batch_idx).corr_coeff_matrix = corr_coeff_matrix;
@@ -219,8 +217,8 @@ for batch_idx = 1:ID_p.num_batches
     
     % Set parameters to be identified based on the batch
     current_params_idx = paramID_idx{batch_idx};
-    lb = bounds.min(current_params_idx);
-    ub = bounds.max(current_params_idx);    
+    lb = p_bounds.min(current_params_idx);
+    ub = p_bounds.max(current_params_idx);    
     theta_guess_current = theta(batch_idx).guess(current_params_idx);
     theta_str_current = theta(batch_idx).str(current_params_idx);
     
@@ -265,7 +263,12 @@ for batch_idx = 1:ID_p.num_batches
     
     clear theta_ID_final theta_str_final
     
+    %% compute rmse relevant metrics for each batch
+    
     %% save current batch data
+    ID_out.baseline = baseline;
+    ID_out.data_select_logic = data_select_logic;
+    ID_out.soc_0 = soc_0;
     ID_out.V_sim_initial = V_sim_initial;
     ID_out.V_sim_final = V_sim_final;
     ID_out.states_initial = states_initial;
@@ -281,15 +284,18 @@ for batch_idx = 1:ID_p.num_batches
     ID_out.theta = theta(batch_idx);
     ID_out.perturb_factor = perturb_factor_initial;
     ID_out.fmincon_out = OUTPUT;
-    ID_out.fmincon_fval = FVAL;
     ID_out.fmincon_exitflag = EXITFLAG;
     ID_out.fmincon_history = history;
     ID_out.fmincon_searchdir = searchdir;
-    ID_out.fmincon_f_evals = function_evals;
     
     save(strcat(output_path,'_batch_',num2str(batch_idx)),'ID_out')
     clear ID_out
 
+    %% Reset fmincon global variables
+    history.x = [];
+    history.fval = [];
+    searchdir = [];
+    
     %% Update truth params, guess, and final_ID vector for next batch
     if batch_idx < ID_p.num_batches
         theta(batch_idx+1).guess = theta(batch_idx).final_ID;
@@ -320,7 +326,7 @@ function stop = outfun(x,optimValues,state)
             % searchdir.
             searchdir = [searchdir;... 
                         optimValues.searchdirection'];
-            plot(x(1),x(2),'o');
+%             plot(x(1),x(2),'o');
             % Label points with iteration number and add title.
             % Add .15 to x(1) to separate label from plotted 'o'
             text(x(1)+.15,x(2),... 

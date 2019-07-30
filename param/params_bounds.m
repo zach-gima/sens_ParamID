@@ -4,7 +4,7 @@
 % Version: 3 (Updated transference number bounds and slimmed down for online paramID 2019-4-19)
 %% May/may not need to add in the 2-state thermal dynamics parameters into this
 
-bounds.min = [  1.0e-6;   % R_s_p
+p_bounds.min = [  1.0e-6;   % R_s_p
                 0.5;          %15.d_activity
                 0.18;        %10.eps_e_n
                 0.1;       %14.t_plus
@@ -13,7 +13,7 @@ bounds.min = [  1.0e-6;   % R_s_p
                 ];
 
              
-bounds.max = [  100.0e-6;   %R_s_p
+p_bounds.max = [  100.0e-6;   %R_s_p
                 1.5;          %d_activity
                 0.45;        %eps_e_n                
                 0.8;       %t_plus

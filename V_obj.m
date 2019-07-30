@@ -6,7 +6,6 @@
 %         (2) Input profile
 
 function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
-    global function_evals
     
     num_events = length(data);
     
@@ -42,8 +41,6 @@ function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
         fgrad = fgrad_RMSE + fgrad;
         cost = RMSE + cost; %MSE
     end
-    
-    function_evals = function_evals + 1;
-    
+        
     fprintf('Total voltage RMSE = %1.6f \n \n',cost);
 end
