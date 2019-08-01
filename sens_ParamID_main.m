@@ -262,9 +262,7 @@ for batch_idx = 1:ID_p.num_batches
     end
     
     clear theta_ID_final theta_str_final
-    
-    %% compute rmse relevant metrics for each batch
-    
+        
     %% save current batch data
     ID_out.baseline = baseline;
     ID_out.data_select_logic = data_select_logic;

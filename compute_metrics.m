@@ -41,37 +41,31 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         load(full_path);
 
         %% Parse Data
-        num_events = length(ID_out.data);
+        opt_event_idx = ID_out.opt_event_idx;
+        num_events = length(opt_event_idx);
         data = ID_out.data;
-    %     opt_data = data(opt_event_idx);
+        opt_data = data(opt_event_idx);
 
-        states_initial = ID_out.states_initial;
-        states_final = ID_out.states_final;
+        V_sim_initial = cell2mat(ID_out.V_sim_initial(opt_event_idx));
+        V_sim_final = cell2mat(ID_out.V_sim_final(opt_event_idx));
+        
+        states_initial = ID_out.states_initial(opt_event_idx);
+        states_final = ID_out.states_final(opt_event_idx);
 
         theta = ID_out.theta;
         theta_iter_vec = 0:num_batches;
 
-        fmincon_iter(batch_idx) = ID_out.fmincon_out.iterations + 1; % +1 to include initial condition
-        %below if structure to handle weird way fmincon outputs were saved;
-        % should be able to remove in future
-        if batch_idx == 1
-            cost_evolution{1} = ID_out.fmincon_history.fval;
-            rmse_vec = vertcat(rmse_vec,[cost_evolution{1}(1);cost_evolution{1}(end)]);
-        else
-            cost_evolution{batch_idx} = ID_out.fmincon_history.fval((fmincon_iter(batch_idx-1)+1):end);
-            rmse_vec = vertcat(rmse_vec,cost_evolution{batch_idx}(end));
-        end
+        fmincon_iter(batch_idx) = ID_out.fmincon_out.iterations + 1; % +1 to includ e initial condition
 
+        %% Parse Truth & Time Data
+        norm_truth_param = origin_to_norm(theta.truth,p_bounds);
+        
         t_end = 0; % for concatenating the time vector data
 
-        %% Parse Truth & time Data
-        norm_truth_param = origin_to_norm(theta.truth,p_bounds);
-
         for zz = 1:num_events
-            t_cell{zz,1} = data(zz).time + t_end;
-            V_true_cell{zz,1} = data(zz).V_exp;
-            states_true{zz,1} = data(zz).states_true;
-
+            t_cell{zz,1} = opt_data(zz).time + t_end;
+            V_true_cell{zz,1} = opt_data(zz).V_exp;
+            states_true{zz,1} = opt_data(zz).states_true;
 
             cssn_true = vertcat(cssn_true,states_true{zz,1}.cssn_sim);
             cssp_true= vertcat(cssp_true,states_true{zz,1}.cssp_sim);
@@ -79,21 +73,39 @@ function [metrics] = compute_metrics(num_batches,partial_path)
             ce0n_true = vertcat(ce0n_true,states_true{zz,1}.ce0n_sim);
             ce0p_true = vertcat(ce0p_true,states_true{zz,1}.ce0p_sim);
 
-            t_end = t_end + data(zz).time(end);
+            t_end = t_end + opt_data(zz).time(end);
         end
 
         t = cell2mat(t_cell);
         V_true = cell2mat(V_true_cell);
 
-        V_sim_initial = cell2mat(ID_out.V_sim_initial);
-        V_sim_final = cell2mat(ID_out.V_sim_final);
+        %% Voltage Stuff
+        if batch_idx == 1
+            cost_evolution{batch_idx} = ID_out.fmincon_history.fval/num_events;
+            rmse_vec = vertcat(rmse_vec,[cost_evolution{batch_idx}(1);cost_evolution{batch_idx}(end)]);
+%             rmse_vec_2 = vertcat(rmse_vec_2,[rmse(V_sim_initial,V_true);rmse(V_sim_final,V_true)]);
+        else
+            cost_evolution{batch_idx} = ID_out.fmincon_history.fval/num_events;
+            rmse_vec = vertcat(rmse_vec,cost_evolution{batch_idx}(end));
+%             rmse_vec_2 = vertcat(rmse_vec_2,rmse(V_sim_final,V_true));
+        end
+        
+        %below if structure to handle weird way fmincon outputs were saved;
+        % should be able to remove in future
+%         if batch_idx == 1
+%             cost_evolution{1} = ID_out.fmincon_history.fval;
+%             rmse_vec = vertcat(rmse_vec,[cost_evolution{1}(1);cost_evolution{1}(end)]);
+%         else
+%             start_idx = fmincon_iter(batch_idx-1)+1;
+%             cost_evolution{batch_idx} = ID_out.fmincon_history.fval(start_idx:end);
+%             rmse_vec = vertcat(rmse_vec,cost_evolution{batch_idx}(end));
+%         end
 
         %% Internal State RMSE
 
         % For first batch, compute initial rmse before ID
         if batch_idx == 1
             for jj = 1:num_events
-
                 cssn_initial = vertcat(cssn_initial,states_initial{jj}.cssn_sim);
                 cssp_initial = vertcat(cssp_initial,states_initial{jj}.cssp_sim);
                 ce0p_initial = vertcat(ce0p_initial,states_initial{jj}.ce0p_sim);
@@ -112,7 +124,6 @@ function [metrics] = compute_metrics(num_batches,partial_path)
     %       etap_rmse(1) = rmse(etap_true,etap_initial);
             norm_initial_param = origin_to_norm(theta.guess,p_bounds);
             norm_param_dist(1) = norm(norm_truth_param-norm_initial_param);
-
         end
 
         for jj = 1:num_events
@@ -123,7 +134,6 @@ function [metrics] = compute_metrics(num_batches,partial_path)
             etas_final = vertcat(etas_final,states_final{jj}.etas_sim);
     %         etan_final = vertcat(etan_final,states_final{jj}.etan_sim);
     %         etap_final = vertcat(etap_final,states_final{jj}.etap_sim);
-
         end
 
         %%% css RMSE and fits
@@ -141,7 +151,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         ce0n_rmse(batch_idx+1) = rmse(ce0n_true,ce0n_final);
         ce0p_rmse(batch_idx+1) = rmse(ce0p_true,ce0p_final);
 
-        %%% normalized parameter distance
+        %% normalized parameter distance
         norm_ID_param = origin_to_norm(theta.final_ID,p_bounds);
         norm_param_dist(batch_idx+1) = norm(norm_truth_param-norm_ID_param);
         
