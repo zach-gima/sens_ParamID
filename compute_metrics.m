@@ -124,6 +124,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
     %       etap_rmse(1) = rmse(etap_true,etap_initial);
             norm_initial_param = origin_to_norm(theta.guess,p_bounds);
             norm_param_dist(1) = norm(norm_truth_param-norm_initial_param);
+            per_param_norm_error{1} = (norm_truth_param-norm_initial_param)./norm_truth_param*100;
         end
 
         for jj = 1:num_events
@@ -154,6 +155,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         %% normalized parameter distance
         norm_ID_param = origin_to_norm(theta.final_ID,p_bounds);
         norm_param_dist(batch_idx+1) = norm(norm_truth_param-norm_ID_param);
+        per_param_norm_error{batch_idx+1} = (norm_truth_param-norm_ID_param)./norm_truth_param*100;
         
         clear ID_out
     end
@@ -169,5 +171,6 @@ function [metrics] = compute_metrics(num_batches,partial_path)
 %     metrics.cost_evolution = cost_evolution;
     metrics.rmse_vec = rmse_vec;
     metrics.theta_iter_vec = theta_iter_vec;
+    metrics.per_param_norm_error = per_param_norm_error;
     
 end

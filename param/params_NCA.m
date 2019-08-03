@@ -97,7 +97,7 @@ p.alph = 0.5;         % Charge transfer coefficients
 
 p.R_f_n = 5e-4;       % Resistivity of SEI layer, [Ohms*m^2]
 p.R_f_p = 1e-4; % ZTG Change from 1e-3;       % Resistivity of SEI layer, [Ohms*m^2]
-p.R_c = 2.5e-03;%5.1874e-05/p.Area; % Contact Resistance/Current Collector Resistance, [Ohms-m^2]
+% p.R_c = 2.5e-03;%5.1874e-05/p.Area; % Contact Resistance/Current Collector Resistance, [Ohms-m^2]
 p.R_c = 0; % ZTG Change 2019-4-24
 
 % Nominal Reaction rates
@@ -117,12 +117,12 @@ p.T_amb = 298.15; % [K]
 % Taken from Zhang et al (2014) [Harbin]
 % http://dx.doi.org/10.1016/j.jpowsour.2014.07.110
 % All units are [J/mol]
-p.E.kn = 37.48e3;
-p.E.kp = 39.57e3;
-p.E.Dsn = 42.77e3;
-p.E.Dsp = 18.55e3;
-p.E.De = 37.04e3;
-p.E.kappa_e = 34.70e3;
+% p.E.kn = 37.48e3;
+% p.E.kp = 39.57e3;
+% p.E.Dsn = 42.77e3;
+% p.E.Dsp = 18.55e3;
+% p.E.De = 37.04e3;
+% p.E.kappa_e = 34.70e3;
 
 % Activation Energies
 % Energies are from Literature and included Zhang values. Values were

@@ -18,6 +18,7 @@ function plot_sensID(metrics,plots_folder)
     rmse_vec = metrics.rmse_vec;
 
     theta_iter_vec = metrics.theta_iter_vec;
+    per_param_norm_error = metrics.per_param_norm_error;
     
     %% plot
     
@@ -185,7 +186,7 @@ function plot_sensID(metrics,plots_folder)
 %     savefig(strcat(plots_folder,'rmse_evolution.fig'))
 %     print(strcat(plots_folder,'rmse_evolution'),'-dpng')
 
-    %% Plot Normalized Distance between True and Estimated Parameters    
+    %% Plot Normalized Distance between True and Estimated Parameters & percentage error
     figure('Position', [100 100 900 700])
     plot(theta_iter_vec, norm_param_dist,'-o','LineWidth',3,'MarkerSize',10,'MarkerEdgeColor','k');
     title('Normalized Parameter Guess Error')
@@ -199,4 +200,26 @@ function plot_sensID(metrics,plots_folder)
 
     savefig(strcat(plots_folder,'norm_param_dist.fig'))
     print(strcat(plots_folder,'norm_param_dist'),'-dpng')
+    
+    % grouped bar chart has 1 group per row in the y_data 
+    param_err = [];
+    for zz = 1:length(per_param_norm_error)
+       param_err = horzcat(param_err,per_param_norm_error{zz}); 
+    end
+    param_err = param_err';
+    
+    % bpcombine2(:), bpcombine3(:)];
+    figure('Position', [100 100 900 700])
+    hb = bar(theta_iter_vec, param_err,'grouped');
+    ylabel('Per Parameter Error (%)')
+    xlabel('Batch')
+    xticks(theta_iter_vec)
+    legend('R_s^+','ElecFactorDA',horzcat(char(949),'_e^-'),'t_+','R_f^-','R_f^+','Location', 'northoutside','Orientation','horizontal');
+    set(gca,'Fontsize',fs)
+
+    box on
+    grid on
+    
+    savefig(strcat(plots_folder,'per_param_err.fig'))
+    print(strcat(plots_folder,'per_param_err'),'-dpng')
 end
