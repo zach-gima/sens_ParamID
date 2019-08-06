@@ -42,7 +42,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
 
         %% Parse Data
         opt_event_idx = ID_out.opt_event_idx;
-        num_events = length(opt_event_idx);
+        num_opt_events = length(opt_event_idx);
         data = ID_out.data;
         opt_data = data(opt_event_idx);
 
@@ -62,7 +62,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         
         t_end = 0; % for concatenating the time vector data
 
-        for zz = 1:num_events
+        for zz = 1:num_opt_events
             t_cell{zz,1} = opt_data(zz).time + t_end;
             V_true_cell{zz,1} = opt_data(zz).V_exp;
             states_true{zz,1} = opt_data(zz).states_true;
@@ -81,11 +81,11 @@ function [metrics] = compute_metrics(num_batches,partial_path)
 
         %% Voltage Stuff
         if batch_idx == 1
-            cost_evolution{batch_idx} = ID_out.fmincon_history.fval/num_events;
+            cost_evolution{batch_idx} = ID_out.fmincon_history.fval/num_opt_events;
             rmse_vec = vertcat(rmse_vec,[cost_evolution{batch_idx}(1);cost_evolution{batch_idx}(end)]);
 %             rmse_vec_2 = vertcat(rmse_vec_2,[rmse(V_sim_initial,V_true);rmse(V_sim_final,V_true)]);
         else
-            cost_evolution{batch_idx} = ID_out.fmincon_history.fval/num_events;
+            cost_evolution{batch_idx} = ID_out.fmincon_history.fval/num_opt_events;
             rmse_vec = vertcat(rmse_vec,cost_evolution{batch_idx}(end));
 %             rmse_vec_2 = vertcat(rmse_vec_2,rmse(V_sim_final,V_true));
         end
@@ -105,7 +105,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
 
         % For first batch, compute initial rmse before ID
         if batch_idx == 1
-            for jj = 1:num_events
+            for jj = 1:num_opt_events
                 cssn_initial = vertcat(cssn_initial,states_initial{jj}.cssn_sim);
                 cssp_initial = vertcat(cssp_initial,states_initial{jj}.cssp_sim);
                 ce0p_initial = vertcat(ce0p_initial,states_initial{jj}.ce0p_sim);
@@ -127,7 +127,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
             per_param_norm_error{1} = (norm_truth_param-norm_initial_param)./norm_truth_param*100;
         end
 
-        for jj = 1:num_events
+        for jj = 1:num_opt_events
             cssn_final = vertcat(cssn_final,states_final{jj}.cssn_sim);
             cssp_final = vertcat(cssp_final,states_final{jj}.cssp_sim);        
             ce0n_final = vertcat(ce0n_final,states_final{jj}.ce0n_sim);

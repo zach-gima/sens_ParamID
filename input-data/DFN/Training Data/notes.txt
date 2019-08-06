@@ -1,0 +1,13 @@
+Date:  2019-4-24
+Author: ZTG
+
+Content: Notes on the data contained in these files. All drive cycles were simulated according to the following details:
+
+-- Model: DFN (CasADi implementation from Bosch Project)
+-- Parameter Set: NCA (Used in Bosch project), 2019-4-24
+-- Rc value = 0
+-- V0 = {3.9481 3.7689 3.5982 3.4562}
+-- T_amb = 25C
+-- **** Current in the .mat file is NOT normalized by area (as required in DFN / SPMeT?) and follows the following sign convention:
+		-- (-) <--> Discharge & (+) Charge
+		-- Note that this is the OPPOSITE of what the model does; hence in the DFN/SPMeT when current is loaded the sign is flipped

@@ -37,11 +37,14 @@ run param/params_bounds
 %%% Set input/output paths & load data
 baseline = 'A'; %'C'; %'B' 'C'
 data_select_logic = 0; % 1 for selecting data according to sensitivity content
+truth_model = 'DFN';
 soc_0 = 'SOC60'; %SOC#
-input_folder = strcat('input-data/SPMeT/Training Data/',soc_0,'/');
+input_folder = strcat('input-data/',truth_model,'/Training Data/',soc_0,'/');
 % input_filename = 'US06x3_batt_ObsData.mat';
 % input_path = strcat(input_folder,input_filename);
-data = load_data(p,input_folder);
+% data = load_data(p,input_folder);
+truth_filename = strcat(input_folder,'DFN_truth_data_1.05_batch_1.mat');
+load(truth_filename,'data')
 
 output_folder = strcat('output-data/','Baseline',baseline,'/',date_txt,'/');
 mkdir(output_folder); %create new subfolder with current date in output_folder
@@ -73,7 +76,7 @@ p = set_discretization(p);
 
 % Specify parameters to be identified -- make sure each theta_ variable specifies the parameters
 % in the same order
-perturb_factor_initial = 1.3;
+perturb_factor_initial = 1; %1.3;
 perturb_factor_batch = 1.05; % each batch move parameters 5%
 theta(ID_p.num_batches) = struct();
 theta(1).truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
@@ -98,11 +101,12 @@ fprintf('Start Time: %s \n \n',datetime_initial);
 tic
 
 for batch_idx = 1:ID_p.num_batches
-
+    fprintf('\n')
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     fprintf('Batch #%i \n',batch_idx)
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-    
+    fprintf('\n')
+
     %% Setup parameter structure for this batch
     theta(batch_idx).char = {'R_s^+';'ElecFactorDA';horzcat(char(949),'_e^-');'t_+';'R_f^-';'R_f^+'}; % char version of the params, used for plotting/fprintf purposes
     theta(batch_idx).str = {'R_s_p';'ElecFactorDA';'epsilon_e_n';'t_plus';'R_f_n';'R_f_p'}; % exact names of the p struct fields, used for updating parameter values
@@ -111,23 +115,26 @@ for batch_idx = 1:ID_p.num_batches
     p = update_p_struct(p,theta(batch_idx).guess,theta(batch_idx).str);
     
     %% Simulate SPMeT for truth parameters
-    % need to do this if changing truth parameters each batch
-    theta_truth_current = theta(batch_idx).truth;
-    p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
-
-    disp('%%%%%%%%%%%%%')
-    disp('Simulating truth data')
-    disp('%%%%%%%%%%%%%')
-    parfor mm = 1:ID_p.num_events
-        [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm))
-    end
+%     % need to do this if changing truth parameters each batch
+%     theta_truth_current = theta(batch_idx).truth;
+%     p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
+% 
+%     disp('%%%%%%%%%%%%%')
+%     disp('Simulating truth data')
+%     disp('%%%%%%%%%%%%%')
+%     parfor mm = 1:ID_p.num_events
+%         [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm))
+%     end
+%     
+%     % store data
+%     for jj = 1:ID_p.num_events
+%         data(jj).V_exp = V_true{jj};
+%         data(jj).states_true = States_true{jj};
+%     end
     
-    % store data
-    for jj = 1:ID_p.num_events
-        data(jj).V_exp = V_true{jj};
-        data(jj).V0 = V_true{jj}(1);
-        data(jj).states_true = States_true{jj};
-    end
+    %% If using DFN as truth model
+    truth_filename = strcat(input_folder,'DFN_truth_data_1.05_batch_',num2str(batch_idx),'.mat');
+    load(truth_filename,'data')
 
     %% Simulate SPMeT for initial parameter guess: voltage, sensitivity
     % Used for event_select
@@ -140,9 +147,11 @@ for batch_idx = 1:ID_p.num_batches
     theta_guess_initial = theta(batch_idx).guess; 
     theta_str_initial = theta(batch_idx).str; % initially pass in all variables because we haven't decided yet which params to ID
     
+    fprintf('\n')
     disp('%%%%%%%%%%%%%')
     disp('Simulating for initial parameter guess')
     disp('%%%%%%%%%%%%%')
+    fprintf('\n')
     parfor ii = 1:ID_p.num_events
         [V_sim_initial{ii},states_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
     end
@@ -172,6 +181,7 @@ for batch_idx = 1:ID_p.num_batches
     else 
         opt_event_idx = (1:ID_p.num_events)'; % all events selected
     end
+    ID_p.num_opt_events = length(opt_event_idx);
     opt_data = data(opt_event_idx); % create new struct of just the optimal data
 
     %% Compute additional sensitivity data needed for parameter collinearty + sensitivity analysis
@@ -210,10 +220,15 @@ for batch_idx = 1:ID_p.num_batches
     %% Identify Parameters
     % Print Initial Cost Function Eval
     cost_initial = 0;  
-    for ii = 1:ID_p.event_budget
+    for ii = 1:ID_p.num_opt_events
         cost_initial = cost_initial + sqrt(mean((opt_data(ii).V_exp - opt_data(ii).V_sim_initial).^2));
     end
-    fprintf('Initial Voltage RMSE = %1.6f \n \n',cost_initial);
+    fprintf('\n')
+    disp('%%%%%%%%%%%%%')
+    fprintf('Initial Summed Voltage RMSE = %1.6f \n',cost_initial);
+    fprintf('Initial Average Voltage RMSE = %1.6f \n',cost_initial/ID_p.num_opt_events);
+    disp('%%%%%%%%%%%%%')
+    fprintf('\n')
     
     % Set parameters to be identified based on the batch
     current_params_idx = paramID_idx{batch_idx};
@@ -225,9 +240,12 @@ for batch_idx = 1:ID_p.num_batches
     % create anonymous function to pass in other parameters needed for V_obj
     fh = @(x)V_obj(x,opt_data,theta_str_current,p);
     
+    fprintf('\n')
     disp('%%%%%%%%%%%%%')
     disp('Identifying parameters')
     disp('%%%%%%%%%%%%%')
+    fprintf('\n')
+
     [theta_ID,FVAL,EXITFLAG,OUTPUT,LAMBDA,GRAD,HESSIAN]= ...
        fmincon(fh,theta_guess_current,[],[],[],[],lb,ub,[],opt);
 
@@ -254,9 +272,11 @@ for batch_idx = 1:ID_p.num_batches
     theta_ID_final =  theta(batch_idx).final_ID(current_params_idx);
     theta_str_final = theta(batch_idx).str(current_params_idx);
     
+    fprintf('\n')
     disp('%%%%%%%%%%%%%')
     disp('Re-simulating model for final parameter values')
     disp('%%%%%%%%%%%%%')
+    fprintf('\n')
     parfor ii = 1:ID_p.num_events
         [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_ID_final,theta_str_final);
     end
@@ -266,6 +286,7 @@ for batch_idx = 1:ID_p.num_batches
     %% save current batch data
     ID_out.baseline = baseline;
     ID_out.data_select_logic = data_select_logic;
+    ID_out.truth_model = truth_model;
     ID_out.soc_0 = soc_0;
     ID_out.V_sim_initial = V_sim_initial;
     ID_out.V_sim_final = V_sim_final;
