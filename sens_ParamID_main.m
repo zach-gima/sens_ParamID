@@ -77,7 +77,7 @@ p = set_discretization(p);
 % Specify parameters to be identified -- make sure each theta_ variable specifies the parameters
 % in the same order
 perturb_factor_initial = 1; %1.3;
-perturb_factor_batch = 1.05; % each batch move parameters 5%
+perturb_factor_batch = 0.95; % each batch move parameters -5%
 theta(ID_p.num_batches) = struct();
 theta(1).truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
 theta(1).guess = perturb_factor_initial*theta(1).truth;
