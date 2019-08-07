@@ -1,7 +1,7 @@
 %% Plot Sens_ID
 
 % function plot_sensID(ID_out)
-function plot_sensID(metrics,plots_folder)
+function plot_sensID(metrics,results_folder,baseline,date)
 
     fs = 25;
     run param/params_bounds
@@ -40,8 +40,8 @@ function plot_sensID(metrics,plots_folder)
     box on
     grid on
 
-    savefig(strcat(plots_folder,'css_rmse.fig'))
-    print(strcat(plots_folder,'css_rmse'),'-dpng')
+    savefig(strcat(results_folder,date,'_',baseline,'_','css_rmse.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','css_rmse'),'-dpng')
 
 %     %anode fit
 %     figure('Position', [100 100 900 700])
@@ -84,8 +84,8 @@ function plot_sensID(metrics,plots_folder)
     box on
     grid on
 
-    savefig(strcat(plots_folder,'etas_rmse.fig'))
-    print(strcat(plots_folder,'etas_rmse'),'-dpng')
+    savefig(strcat(results_folder,date,'_',baseline,'_','etas_rmse.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','etas_rmse'),'-dpng')
 
 %     % etas fit
 %     figure('Position', [100 100 900 700])
@@ -113,8 +113,8 @@ function plot_sensID(metrics,plots_folder)
     box on
     grid on
 
-    savefig(strcat(plots_folder,'ce0_rmse.fig'))
-    print(strcat(plots_folder,'ce0_rmse'),'-dpng')
+    savefig(strcat(results_folder,date,'_',baseline,'_','ce0_rmse.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','ce0_rmse'),'-dpng')
     
 %     %anode
 %     figure('Position', [100 100 900 700])
@@ -164,13 +164,13 @@ function plot_sensID(metrics,plots_folder)
     xlabel('Batch')
     xticks(theta_iter_vec)
     ylabel('Voltage RMSE (V)')
-    title('Voltage RMSE vs. Iter')
+    title('Voltage RMSE vs. Batch')
     set(gca,'Fontsize',fs)
     box on
     grid on
      
-    savefig(strcat(plots_folder,'voltage_rmse.fig'))
-    print(strcat(plots_folder,'voltage_rmse'),'-dpng')
+    savefig(strcat(results_folder,date,'_',baseline,'_','voltage_rmse.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','voltage_rmse'),'-dpng')
     
     
     %% Plot RMSE vs Computational Time
@@ -198,8 +198,8 @@ function plot_sensID(metrics,plots_folder)
     box on
     grid on
 
-    savefig(strcat(plots_folder,'norm_param_dist.fig'))
-    print(strcat(plots_folder,'norm_param_dist'),'-dpng')
+    savefig(strcat(results_folder,date,'_',baseline,'_','norm_param_dist.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','norm_param_dist'),'-dpng')
     
     % grouped bar chart has 1 group per row in the y_data 
     param_err = [];
@@ -220,6 +220,6 @@ function plot_sensID(metrics,plots_folder)
     box on
     grid on
     
-    savefig(strcat(plots_folder,'per_param_err.fig'))
-    print(strcat(plots_folder,'per_param_err'),'-dpng')
+    savefig(strcat(results_folder,date,'_',baseline,'_','per_param_err.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','per_param_err'),'-dpng')
 end

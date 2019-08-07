@@ -1,41 +1,43 @@
 function [metrics] = compute_metrics(num_batches,partial_path)
     run param/params_bounds
 
-    %%% Pre-allocate states of interest
-    % Surface concentration
-    cssn_initial = [];
-    cssn_final = [];
-    cssp_initial = [];
-    cssp_final = [];
-    % Side rxn overpotential
-    etas_initial = [];
-    etas_final = [];    
-
-    %Electrode overpotential
-    %     etan_initial = [];
-    %     etan_final = [];
-    %     etap_initial  = [];
-    %     etap_final  = [];
-
-    % elyte conc. at current collectors
-    ce0n_initial = [];
-    ce0n_final = [];
-    ce0p_initial = [];
-    ce0p_final = [];
-
-    cssn_true = [];
-    cssp_true = [];
-    etas_true =  [];
-    ce0n_true =  [];
-    ce0p_true =  [];
-    
     rmse_vec = [];
     cost_evolution = cell(num_batches,1);
     
     % fmincon stuff
-    fmincon_iter = zeros(num_batches,1);
+    fmincon_iters = 0;
+    fmincon_fcount = 0;
+    t_comp = 0; % wallclock time (Hrs)
     
     for batch_idx = 1:num_batches
+        %%% Pre-allocate states of interest -- re-do every batch
+        % Surface concentration
+        cssn_initial = [];
+        cssn_final = [];
+        cssp_initial = [];
+        cssp_final = [];
+        % Side rxn overpotential
+        etas_initial = [];
+        etas_final = [];    
+
+        %Electrode overpotential
+        %     etan_initial = [];
+        %     etan_final = [];
+        %     etap_initial  = [];
+        %     etap_final  = [];
+
+        % elyte conc. at current collectors
+        ce0n_initial = [];
+        ce0n_final = [];
+        ce0p_initial = [];
+        ce0p_final = [];
+
+        cssn_true = [];
+        cssp_true = [];
+        etas_true =  [];
+        ce0n_true =  [];
+        ce0p_true =  [];
+        
         % Load data
         full_path = strcat(partial_path,num2str(batch_idx),'.mat');
         load(full_path);
@@ -54,9 +56,11 @@ function [metrics] = compute_metrics(num_batches,partial_path)
 
         theta = ID_out.theta;
         theta_iter_vec = 0:num_batches;
-
-        fmincon_iter(batch_idx) = ID_out.fmincon_out.iterations + 1; % +1 to includ e initial condition
-
+        
+        fmincon_iters = fmincon_iters + ID_out.fmincon_out.iterations;
+        fmincon_fcount = fmincon_fcount + ID_out.fmincon_out.funcCount;
+        t_comp = t_comp + ID_out.wallclock/3600; 
+        
         %% Parse Truth & Time Data
         norm_truth_param = origin_to_norm(theta.truth,p_bounds);
         
@@ -66,12 +70,28 @@ function [metrics] = compute_metrics(num_batches,partial_path)
             t_cell{zz,1} = opt_data(zz).time + t_end;
             V_true_cell{zz,1} = opt_data(zz).V_exp;
             states_true{zz,1} = opt_data(zz).states_true;
-
-            cssn_true = vertcat(cssn_true,states_true{zz,1}.cssn_sim);
-            cssp_true= vertcat(cssp_true,states_true{zz,1}.cssp_sim);
-            etas_true = vertcat(etas_true,states_true{zz,1}.etas_sim);
-            ce0n_true = vertcat(ce0n_true,states_true{zz,1}.ce0n_sim);
-            ce0p_true = vertcat(ce0p_true,states_true{zz,1}.ce0p_sim);
+            
+            % Truth Model: SPMeT
+            if isfield(states_true{zz,1},'etas_sim') % naming convention in spmet
+                cssn_true = vertcat(cssn_true,states_true{zz,1}.cssn_sim);
+                cssp_true= vertcat(cssp_true,states_true{zz,1}.cssp_sim);
+                
+                etas_true = vertcat(etas_true,states_true{zz,1}.etas_sim);
+                
+                ce0n_true = vertcat(ce0n_true,states_true{zz,1}.ce0n_sim);
+                ce0p_true = vertcat(ce0p_true,states_true{zz,1}.ce0p_sim);
+            
+            % Truth Model: DFN
+            elseif isfield(states_true{zz,1},'etasLn_sim') % naming convention in DFN
+                % spatial discretization different in DFN; grab c_ss bordering elyte
+                cssn_true = vertcat(cssn_true,states_true{zz,1}.cssn_sim(end,:)');
+                cssp_true= vertcat(cssp_true,states_true{zz,1}.cssp_sim(1,:)');
+                
+                etas_true = vertcat(etas_true,states_true{zz,1}.etasLn_sim');
+                
+                ce0n_true = vertcat(ce0n_true,states_true{zz,1}.ce0n_sim');
+                ce0p_true = vertcat(ce0p_true,states_true{zz,1}.ce0p_sim');
+            end
 
             t_end = t_end + opt_data(zz).time(end);
         end
@@ -160,14 +180,44 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         clear ID_out
     end
     
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%')
+    fprintf('Baseline: %s \n',baseline)
+    fprintf('Truth Model: %s \n',truth_model)
+
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%')
+    fprintf('Final Voltage RMSE: %4.3f \n',rmse_vec(end))
+    fprintf('Final eta_s RMSE: %4.3f \n',etas_rmse(end))
+    fprintf('Final c_ss^+ RMSE: %4.3f \n',cssp_rmse(end))
+    fprintf('Final c_ss^- RMSE: %4.3f \n',cssn_rmse(end))
+    fprintf('Final c_e(0^+) RMSE: %4.3f \n',ce0p_rmse(end))
+    fprintf('Final c_e(0^-) RMSE: %4.3f \n',ce0n_rmse(end))
+    fprintf('Final norm param error: %4.3f \n',norm_param_dist(end));
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%')
+    
+    fprintf('Total fmincon iterations: %i \n',fmincon_iters);
+    fprintf('Avg. fmincon iterations: %i \n',round(fmincon_iters/num_batches));
+    fprintf('Total fmincon function evaluations: %i \n',fmincon_fcount);
+    fprintf('Avg. fmincon function evaluations: %i \n',round(fmincon_fcount/num_batches));
+    fprintf('Total Computation Time: %.2f \n', t_comp)
+    fprintf('Avg. Computation Time: %.2f \n', t_comp/num_batches)
+    disp('%%%%%%%%%%%%%%%%%%%%%%%%')
+    
     % save and output data
+    metrics.baseline = baseline;
+    metrics.truth_model = truth_model;
+    metrics.soc_0 = soc_0;
+    metrics.perturb_factor_initial = perturb_factor_initial;
+    metrics.perturb_factor_batch = perturb_factor_batch;
+    metrics.num_batches = num_batches;
     metrics.cssn_rmse = cssn_rmse;
     metrics.cssp_rmse = cssp_rmse;
     metrics.etas_rmse = etas_rmse;
     metrics.ce0n_rmse = ce0n_rmse;
     metrics.ce0p_rmse = ce0p_rmse;
     metrics.norm_param_dist = norm_param_dist;
-    metrics.fmincon_iter = fmincon_iter;
+    metrics.fmincon_iters = fmincon_iters;
+    metrics.fmincon_fcount = fmincon_fcount;
+    metrics.total_wallclock = t_comp;
 %     metrics.cost_evolution = cost_evolution;
     metrics.rmse_vec = rmse_vec;
     metrics.theta_iter_vec = theta_iter_vec;

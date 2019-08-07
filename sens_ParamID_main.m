@@ -35,8 +35,7 @@ run param/params_bounds
 % run param/params_LCO % loads p struct
 
 %%% Set input/output paths & load data
-baseline = 'A'; %'C'; %'B' 'C'
-data_select_logic = 0; % 1 for selecting data according to sensitivity content
+baseline = '1'; %'2a'; %'2b' '3'
 truth_model = 'DFN';
 soc_0 = 'SOC60'; %SOC#
 input_folder = strcat('input-data/',truth_model,'/Training Data/',soc_0,'/');
@@ -96,7 +95,6 @@ datetime_final = cell(ID_p.num_batches,1);
 fprintf('\n')
 disp('*********BEGINNING PARAMETER ID ROUTINE*********')
 fprintf('Baseline %s \n',baseline)
-fprintf('Data selection: %i \n', data_select_logic)
 fprintf('Start Time: %s \n \n',datetime_initial);
 tic
 
@@ -176,10 +174,14 @@ for batch_idx = 1:ID_p.num_batches
     % opt_event_idx contains the indices corresponding to events that were
     % selected for having the highest sensitivity content w.r.t. the parameters
     % of interest
-    if data_select_logic == 1
+    if strcmp('2b',baseline) || strcmp('3',baseline)
         opt_event_idx = event_select(ID_p,STS_norm_initial);
-    else 
+        disp('Only using optimal data')
+    elseif strcmp('1',baseline) || strcmp('2a',baseline)
         opt_event_idx = (1:ID_p.num_events)'; % all events selected
+        disp('Using all data')
+    else
+        error('Baseline improperly specified. Set baseline = ''1'',''2a'',''2b'' or ''3'' ')
     end
     ID_p.num_opt_events = length(opt_event_idx);
     opt_data = data(opt_event_idx); % create new struct of just the optimal data
@@ -195,14 +197,16 @@ for batch_idx = 1:ID_p.num_batches
     
    %% Eliminate parameters from identification routine according to collinearity + sensitivity analysis
     % For each batch of optimal data, determine which parameters to identify 
-   % Baseline A: All Params
-    if strcmp('A',baseline) 
+   % Baseline 1,2b: All Params
+    if strcmp('1',baseline) || strcmp('2b',baseline)
         paramID_idx{batch_idx} = (1:ID_p.np)';
-    % Baseline B and C
-    elseif strcmp('B',baseline) || strcmp('C',baseline)
+        disp('All parameters to be IDed')
+    % Baseline 2a,3: identifiable parameter set
+    elseif strcmp('2a',baseline) || strcmp('3',baseline)
         [paramID_idx{batch_idx}] = param_remove(sens_data(batch_idx),ID_p,theta(batch_idx).char);
+        disp('Only identifiable subset of parameters to be IDed')
     else
-        error('Baseline improperly specified. Set baseline = ''A'',''B'', or ''C'' ')
+        error('Baseline improperly specified. Set baseline = ''1'',''2a'',''2b'' or ''3'' ')
     end
            
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   DEBUG   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -285,7 +289,6 @@ for batch_idx = 1:ID_p.num_batches
         
     %% save current batch data
     ID_out.baseline = baseline;
-    ID_out.data_select_logic = data_select_logic;
     ID_out.truth_model = truth_model;
     ID_out.soc_0 = soc_0;
     ID_out.V_sim_initial = V_sim_initial;

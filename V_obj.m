@@ -42,5 +42,7 @@ function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
         cost = RMSE + cost; %MSE
     end
         
-    fprintf('Total voltage RMSE = %1.6f \n \n',cost);
+    fprintf('Summed Voltage RMSE = %1.6f \n',cost);
+    fprintf('Average Voltage RMSE = %1.6f \n \n',cost/num_events);
+
 end
