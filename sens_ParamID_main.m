@@ -42,7 +42,7 @@ input_folder = strcat('input-data/',truth_model,'/Training Data/',soc_0,'/');
 % input_filename = 'US06x3_batt_ObsData.mat';
 % input_path = strcat(input_folder,input_filename);
 % data = load_data(p,input_folder);
-truth_filename = strcat(input_folder,'DFN_truth_data_1.05_batch_1.mat');
+truth_filename = strcat(input_folder,'DFN_truth_data_0.9_batch_1.mat');
 load(truth_filename,'data')
 
 output_folder = strcat('output-data/','Baseline',baseline,'/',date_txt,'/');
@@ -75,8 +75,8 @@ p = set_discretization(p);
 
 % Specify parameters to be identified -- make sure each theta_ variable specifies the parameters
 % in the same order
-perturb_factor_initial = 1; %1.3;
-perturb_factor_batch = 0.95; % each batch move parameters -5%
+perturb_factor_initial = 1.3; %1.3;
+perturb_factor_batch = 0.9; % each batch move parameters -10%
 theta(ID_p.num_batches) = struct();
 theta(1).truth = [p.R_s_p;p.ElecFactorDA;p.epsilon_e_n;p.t_plus;p.R_f_n;p.R_f_p]; % initial value
 theta(1).guess = perturb_factor_initial*theta(1).truth;
@@ -84,7 +84,6 @@ theta(1).final_ID = theta(1).guess; % initialize the final ID as the guess value
 
 ID_p.np = length(theta(1).guess);
 params_all_idx = (1:ID_p.np)'; % vector of indices for all parameters, used for initial model simulation
-
 
 %% Run ParamID routine
 % Initialize variables
@@ -131,7 +130,7 @@ for batch_idx = 1:ID_p.num_batches
 %     end
     
     %% If using DFN as truth model
-    truth_filename = strcat(input_folder,'DFN_truth_data_1.05_batch_',num2str(batch_idx),'.mat');
+    truth_filename = strcat(input_folder,'DFN_truth_data_0.9_batch_',num2str(batch_idx),'.mat');
     load(truth_filename,'data')
 
     %% Simulate SPMeT for initial parameter guess: voltage, sensitivity
@@ -338,8 +337,8 @@ function stop = outfun(x,optimValues,state)
     
     switch state
         case 'init'
-            figure('Position', [100 100 900 700])
-            hold on
+%             figure('Position', [100 100 900 700])
+%             hold on
         case 'iter'
             % Concatenate current point and objective function
             % value with history. x must be a row vector.
@@ -352,11 +351,11 @@ function stop = outfun(x,optimValues,state)
 %             plot(x(1),x(2),'o');
             % Label points with iteration number and add title.
             % Add .15 to x(1) to separate label from plotted 'o'
-            text(x(1)+.15,x(2),... 
-                num2str(optimValues.iteration));
-            title('Sequence of Points Computed by fmincon');
+%             text(x(1)+.15,x(2),... 
+%                 num2str(optimValues.iteration));
+%             title('Sequence of Points Computed by fmincon');
         case 'done'
-            hold off
+%             hold off
     otherwise
     end
 end
