@@ -35,7 +35,7 @@ function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
         RMSE = sqrt(MSE);
 
         fgrad_MSE = -2/N*sens'*(v_dat - v_sim); % MSE gradient
-        fgrad_RMSE = 1/(2*sqrt(MSE))*fgrad_MSE; %RMSE gradient
+        fgrad_RMSE = 1/(2*sqrt(MSE))*fgrad_MSE; % RMSE gradient
 
         % Sum these quantities for non-contiguous event data
         fgrad = fgrad_RMSE + fgrad;

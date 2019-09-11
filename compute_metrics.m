@@ -1,5 +1,6 @@
 function [metrics] = compute_metrics(num_batches,partial_path)
     run param/params_bounds
+    run param/params_NCA
 
     rmse_vec = [];
     cost_evolution = cell(num_batches,1);
@@ -43,6 +44,12 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         load(full_path);
 
         %% Parse Data
+        baseline = ID_out.baseline;
+        truth_model = ID_out.truth_model;
+        soc_0 = ID_out.soc_0;
+        perturb_factor_initial = ID_out.perturb_factor_initial;
+        perturb_factor_batch = ID_out.perturb_factor_batch;
+        
         opt_event_idx = ID_out.opt_event_idx;
         num_opt_events = length(opt_event_idx);
         data = ID_out.data;
@@ -67,7 +74,13 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         t_end = 0; % for concatenating the time vector data
 
         for zz = 1:num_opt_events
+%             if zz < 4
+%                 t_cell{zz,1} = opt_data(zz).time' + t_end;
+%             else
+%                 t_cell{zz,1} = opt_data(zz).time + t_end;
+%             end
             t_cell{zz,1} = opt_data(zz).time + t_end;
+
             V_true_cell{zz,1} = opt_data(zz).V_exp;
             states_true{zz,1} = opt_data(zz).states_true;
             
@@ -130,7 +143,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
                 cssp_initial = vertcat(cssp_initial,states_initial{jj}.cssp_sim);
                 ce0p_initial = vertcat(ce0p_initial,states_initial{jj}.ce0p_sim);
                 ce0n_initial = vertcat(ce0n_initial,states_initial{jj}.ce0n_sim);
-                etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim);
+                etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim+0.4);
         %         etan_initial = vertcat(etan_initial,states_initial{jj}.etan_sim);
         %         etap_initial = vertcat(etap_initial,states_initial{jj}.etap_sim);
             end
@@ -152,7 +165,7 @@ function [metrics] = compute_metrics(num_batches,partial_path)
             cssp_final = vertcat(cssp_final,states_final{jj}.cssp_sim);        
             ce0n_final = vertcat(ce0n_final,states_final{jj}.ce0n_sim);
             ce0p_final = vertcat(ce0p_final,states_final{jj}.ce0p_sim);
-            etas_final = vertcat(etas_final,states_final{jj}.etas_sim);
+            etas_final = vertcat(etas_final,states_final{jj}.etas_sim+0.4);
     %         etan_final = vertcat(etan_final,states_final{jj}.etan_sim);
     %         etap_final = vertcat(etap_final,states_final{jj}.etap_sim);
         end
@@ -187,10 +200,10 @@ function [metrics] = compute_metrics(num_batches,partial_path)
     disp('%%%%%%%%%%%%%%%%%%%%%%%%')
     fprintf('Final Voltage RMSE: %4.3f \n',rmse_vec(end))
     fprintf('Final eta_s RMSE: %4.3f \n',etas_rmse(end))
-    fprintf('Final c_ss^+ RMSE: %4.3f \n',cssp_rmse(end))
-    fprintf('Final c_ss^- RMSE: %4.3f \n',cssn_rmse(end))
-    fprintf('Final c_e(0^+) RMSE: %4.3f \n',ce0p_rmse(end))
-    fprintf('Final c_e(0^-) RMSE: %4.3f \n',ce0n_rmse(end))
+    fprintf('Final c_ss^+ RMSE, %% error: %4.3f, %4.3f \n',cssp_rmse(end),cssp_rmse(end) / p.c_s_p_max * 100)
+    fprintf('Final c_ss^- RMSE, %% error: %4.3f, %4.3f \n',cssn_rmse(end),cssn_rmse(end) / p.c_s_n_max * 100)
+    fprintf('Final c_e(0^+) RMSE, %% error: %4.3f, %4.3f \n',ce0p_rmse(end), ce0p_rmse(end) / p.c_e * 100)
+    fprintf('Final c_e(0^-) RMSE, %% error: %4.3f, %4.3f \n',ce0n_rmse(end), ce0n_rmse(end) / p.c_e * 100)
     fprintf('Final norm param error: %4.3f \n',norm_param_dist(end));
     disp('%%%%%%%%%%%%%%%%%%%%%%%%')
     

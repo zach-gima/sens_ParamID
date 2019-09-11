@@ -171,7 +171,7 @@ p.kappa_P = 1;      % [S/m] conductivity of side rxn product
 p.M_P = 7.3e1;      % [kg/mol] molecular weight of side rxn product
 p.rho_P = 2.1e3;    % [kg/m^3] mass density of side rxn product
 p.i0s = 0; %1.5e-6;     % [A/m^2] exchange current density of side rxn
-p.Us = 0.4;         % [V] reference potential of side rxn
+p.Us = 0;% [ZTG Change 2019-8-12] 0.4;         % [V] reference potential of SEI Layer growth side rxn; 0 is the ref potential for Li plating
 
 %% Concentrations
 % Maxima based on DUALFOIL 
