@@ -10,5 +10,5 @@ function p = update_p_struct(p,theta_ID,theta_str)
     end
 
     %% Also Update Parameter Dependencies
-    p = update_dependencies(p,0);
+    p = update_dependencies(p);
 end

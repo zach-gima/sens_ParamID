@@ -12,9 +12,10 @@ function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
     %% Simulate SPMeT
     v_sim_cell = cell(num_events,1);
     sens_cell = cell(num_events,1);
-    
+        
     parfor ii = 1:num_events
-        [v_sim_cell{ii},~,sens_cell{ii}] = spmet_casadi(p,data(ii),theta_0,theta_str);        
+%         [v_sim_cell{ii},~,sens_cell{ii}] = spmet_casadi(p, data(ii), theta_0, theta_str);
+        [v_sim_cell{ii},~,sens_cell{ii}] = dfn_casadi(p, data(ii), theta_0, theta_str);
     end
     
     cost = 0;
@@ -25,7 +26,7 @@ function [ cost,fgrad ] = V_obj(theta_0, data, theta_str, p)
     for ii = 1:num_events
         
         % Parse current event data
-        v_dat = data(ii).V_exp; % truth/measured voltage data we're fitting to   
+        v_dat = data(ii).V_true; % truth/measured voltage data we're fitting to   
         v_sim = v_sim_cell{ii};
         sens = sens_cell{ii};
         N = length(v_dat);

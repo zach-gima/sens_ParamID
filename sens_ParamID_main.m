@@ -10,10 +10,11 @@ fs = 25;
 datetime_initial = datetime('now','TimeZone','America/Los_Angeles');
 date_txt = strrep(datestr(datetime_initial), ':', '_');
 
-% addpath('/Users/ztakeo/Documents/MATLAB/casadi') % Mac Laptop
-% addpath('C:/Users/Zach/Documents/MATLAB/casadi_windows') % HPC-1
-% addpath('C:/Users/zgima/Documents/MATLAB/casadi_windows') % HPC-2
-% addpath('/global/home/users/ztakeo/modules/casadi-matlab');    % For Savio
+% Add path to model of choice: SPMeT or DFN
+addpath(genpath('models/'))
+
+%addpath to additional folders needed
+addpath('param_remove/') % functions needed for parameter elimination
 
 %% instantiate global variables that will track iterations within fmincon & optimization options object
 global history;
@@ -30,15 +31,15 @@ opt = optimoptions('fmincon','Display','iter','Algorithm','sqp',...
 %% User Inputs
 
 %%% Load Parameters
-run param/params_NCA
-run param/params_bounds
+run params/params_NCA
+run params/params_bounds
 
 %%% Set Simulation Study Settings
-baseline = '1'; %'2a'; %'2b' '3'
+baseline = '2b'; %'2a'; %'2b' '3'
 truth_model = 'DFN'; %'SPMeT' 'Experimental'
 soc_0 = 'SOC60'; %SOC#
-perturb_factor_initial = 1; %1.3;
-perturb_factor_batch = 0.9; % each batch move parameters -10%
+perturb_factor_initial = 1.3; %1.3;
+perturb_factor_batch = 0.95; % each batch move parameters -10%
 
 %%% setup structure to hold all of param-ID related hyperparameters
 ID_p = struct(); 
@@ -47,7 +48,8 @@ ID_p.num_batches = 1; % num batches; batches are made of events
 ID_p.collinearity_thresh = 0.7;
 
 %%% Set input/output paths
-input_folder = strcat('input-data/',truth_model,'/Training Data/',soc_0,'/');
+input_folder = strcat('input-data/',truth_model,'/Training Data/',strcat('drive_cycles_',soc_0),'/');
+% input_folder = strcat('input-data/debug/'); %%% DEBUG
 output_folder = strcat('output-data/','Baseline',baseline,'/',date_txt,'/');
 mkdir(output_folder); %create new subfolder with current date in output_folder
 output_path = strcat(output_folder,date_txt,'_results');
@@ -55,16 +57,12 @@ error_filename = strcat(output_folder,date_txt,'_sim_log.txt'); % For saving err
 diary(error_filename)
 
 %% Load Data and Set Discretization Based on User Inputs
-if strcmp('SPMeT',truth_model)
-    data = load_data(p,input_folder);
-elseif strcmp('DFN',truth_model)
-    truth_filename = strcat(input_folder,'DFN_truth_data_',num2str(perturb_factor_batch),'_batch_1.mat');
-    load(truth_filename,'data')    
-end
+data = load_data(p,input_folder);
+
 ID_p.num_events = length(data);
 
 %%% Set Model Discretization Parameters
-p = set_discretization(p);
+p = set_discretization(p,truth_model);
 
 %% Specify the parameters to identify:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -101,6 +99,7 @@ datetime_final = cell(ID_p.num_batches,1);
 fprintf('\n')
 disp('*********BEGINNING PARAMETER ID ROUTINE*********')
 fprintf('Baseline %s \n',baseline)
+fprintf('Truth Model %s \n',truth_model)
 fprintf('Start Time: %s \n \n',datetime_initial);
 tic
 
@@ -111,37 +110,47 @@ for batch_idx = 1:ID_p.num_batches
     disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
     fprintf('\n')
     
-    % update p struct with initial guess
-    p = update_p_struct(p,theta(batch_idx).guess,theta(batch_idx).str);
+    %% Simulate SPMeT/DFN for truth parameters
+    % necessary if altering truth parameters each batch
+    disp('%%%%%%%%%%%%%')
+    disp('Simulating truth data')
+    disp('%%%%%%%%%%%%%')
     
-    %% Simulate SPMeT for truth parameters
-    % need to do this if changing truth parameters each batch
+    % Set truth params (if changing each batch) and update p struct 
+    theta_truth_current = theta(batch_idx).truth;
+    p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
+    
     if strcmp('SPMeT',truth_model)
-        theta_truth_current = theta(batch_idx).truth;
-        p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
-
-        disp('%%%%%%%%%%%%%')
-        disp('Simulating truth data')
-        disp('%%%%%%%%%%%%%')
         parfor mm = 1:ID_p.num_events
-            [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm))
-        end
-
-        % store data
-        for jj = 1:ID_p.num_events
-            data(jj).V_exp = V_true{jj};
-            data(jj).states_true = States_true{jj};
+            [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm));
         end
     elseif strcmp('DFN',truth_model)
-        truth_filename = strcat(input_folder,'DFN_truth_data_0.9_batch_',num2str(batch_idx),'.mat');
-        load(truth_filename,'data')
+        parfor mm = 1:ID_p.num_events
+            [V_true{mm},States_true{mm}] = dfn_casadi(p_truth,data(mm));
+        end
+    else
+        error('Please specify either "SPMeT" or "DFN"')
     end
     
-    %% Simulate SPMeT for initial parameter guess: voltage, sensitivity
+    % store data
+    for jj = 1:ID_p.num_events
+        data(jj).V_true = V_true{jj};
+        data(jj).states_true = States_true{jj};
+    end
+    
+    %% Simulate SPMeT AND DFN for initial parameter guess: voltage, sensitivity
+    % NOTE: WILL ONLY USE SPMET SENSITIVITY FOR SELECTING EVENT DATA;
+    % SAVING BOTH IN ORDER TO COMPARE SENSITIVITY TRAJECTORIES
     % Used for event_select
-    V_sim_initial = cell(ID_p.num_events,1);
-    sens_initial = cell(ID_p.num_events,1);
-    states_initial = cell(ID_p.num_events,1);
+    V_sim_initial_spmet = cell(ID_p.num_events,1);
+    sens_initial_spmet = cell(ID_p.num_events,1);
+    states_initial_spmet = cell(ID_p.num_events,1);
+    
+    V_sim_initial_dfn = cell(ID_p.num_events,1);
+    sens_initial_dfn = cell(ID_p.num_events,1);
+    states_initial_dfn = cell(ID_p.num_events,1);
+    % update p struct with guess
+    p = update_p_struct(p,theta(batch_idx).guess,theta(batch_idx).str);
     
     % Simulate model for Voltage, Sensitivity
     % parfor loops don't behave well with structures; assign temp variable
@@ -153,20 +162,30 @@ for batch_idx = 1:ID_p.num_batches
     disp('Simulating for initial parameter guess')
     disp('%%%%%%%%%%%%%')
     fprintf('\n')
+    tic 
+    p_spmet = set_discretization(p,'SPMeT'); % necessary for running spmet and dfn together
     parfor ii = 1:ID_p.num_events
-        [V_sim_initial{ii},states_initial{ii},sens_initial{ii}] = spmet_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
+        [V_sim_initial_spmet{ii},states_initial_spmet{ii},sens_initial_spmet{ii}] = spmet_casadi(p_spmet,data(ii),theta_guess_initial,theta_str_initial);
     end
+    sens_time_spmet = toc;
+    
+    tic
+    parfor ii = 1:ID_p.num_events
+        [V_sim_initial_dfn{ii},states_initial_dfn{ii},sens_initial_dfn{ii}] = dfn_casadi(p,data(ii),theta_guess_initial,theta_str_initial);
+    end
+    sens_time_dfn = toc;
+
     clear theta_guess_initial theta_str_initial
     
     % Compute STS_norm for selecting optimal data
     STS_norm_initial = cell(ID_p.num_events,1);
     for ii = 1:ID_p.num_events
-        data(ii).V_sim_initial = V_sim_initial{ii};
-        data(ii).sens_initial = sens_initial{ii};
+        data(ii).V_sim_initial_dfn = V_sim_initial_dfn{ii};
+        data(ii).sens_initial_spmet = sens_initial_spmet{ii};
         %%% ZTG Note 2019-7-11: compute_sens_variables recomputes the
         %%% normalize_sens_factor -- should this factor update with
         %%% parameter updates?
-        [STS_norm_initial{ii},~,~] = compute_sens_variables(p,p_bounds,sens_initial{ii});
+        [STS_norm_initial{ii},~,~] = compute_sens_variables(p,p_bounds,sens_initial_spmet{ii});
     end
 
     %% Select events
@@ -184,15 +203,6 @@ for batch_idx = 1:ID_p.num_batches
     end
     ID_p.num_opt_events = length(opt_event_idx);
     opt_data = data(opt_event_idx); % create new struct of just the optimal data
-
-    %% Compute additional sensitivity data needed for parameter collinearty + sensitivity analysis
-    % Compute other sensitivity information for the concatenated sens data
-    sens_data(batch_idx).sens = vertcat(opt_data.sens_initial); 
-
-    [STS_norm,STS_norm_diag,corr_coeff_matrix] = compute_sens_variables(p,p_bounds,sens_data(batch_idx).sens);
-    sens_data(batch_idx).STS_norm = STS_norm;
-    sens_data(batch_idx).STS_norm_diag = STS_norm_diag;
-    sens_data(batch_idx).corr_coeff_matrix = corr_coeff_matrix;
     
    %% Eliminate parameters from identification routine according to collinearity + sensitivity analysis
     % For each batch of optimal data, determine which parameters to identify 
@@ -202,7 +212,18 @@ for batch_idx = 1:ID_p.num_batches
         disp('All parameters to be IDed')
     % Baseline 2a,3: identifiable parameter set
     elseif strcmp('2a',baseline) || strcmp('3',baseline)
+        %%% Compute additional sensitivity data needed for parameter collinearty + sensitivity analysis
+        % Compute other sensitivity information for the concatenated sens data
+        sens_data(batch_idx).sens = vertcat(opt_data.sens_initial); 
+        [STS_norm,STS_norm_diag,corr_coeff_matrix] = compute_sens_variables(p,p_bounds,sens_data(batch_idx).sens);
+        sens_data(batch_idx).STS_norm = STS_norm;
+        sens_data(batch_idx).STS_norm_diag = STS_norm_diag;
+        sens_data(batch_idx).corr_coeff_matrix = corr_coeff_matrix;
+        
         [paramID_idx{batch_idx}] = param_remove(sens_data(batch_idx),ID_p,theta(batch_idx).char);
+        
+        clear sens_data
+        
         disp('Only identifiable subset of parameters to be IDed')
     else
         error('Baseline improperly specified. Set baseline = ''1'',''2a'',''2b'' or ''3'' ')
@@ -210,7 +231,7 @@ for batch_idx = 1:ID_p.num_batches
            
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   DEBUG   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %     figure('Position', [100 100 900 700])
-%     plot(opt_data(1).V_exp,'LineWidth', 2.5);
+%     plot(opt_data(1).V_true,'LineWidth', 2.5);
 %     hold on
 %     plot(opt_data(1).V_sim_initial,'LineWidth', 2.5);
 %     hold off
@@ -224,7 +245,7 @@ for batch_idx = 1:ID_p.num_batches
     % Print Initial Cost Function Eval
     cost_initial = 0;  
     for ii = 1:ID_p.num_opt_events
-        cost_initial = cost_initial + sqrt(mean((opt_data(ii).V_exp - opt_data(ii).V_sim_initial).^2));
+        cost_initial = cost_initial + sqrt(mean((opt_data(ii).V_true - opt_data(ii).V_sim_initial_dfn).^2));
     end
     fprintf('\n')
     disp('%%%%%%%%%%%%%')
@@ -281,7 +302,8 @@ for batch_idx = 1:ID_p.num_batches
     disp('%%%%%%%%%%%%%')
     fprintf('\n')
     parfor ii = 1:ID_p.num_events
-        [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_ID_final,theta_str_final);
+%         [V_sim_final{ii},states_final{ii},sens_final{ii}] = spmet_casadi(p,data(ii),theta_ID_final,theta_str_final);
+        [V_sim_final{ii},states_final{ii},sens_final{ii}] = dfn_casadi(p,data(ii),theta_ID_final,theta_str_final);
     end
     
     clear theta_ID_final theta_str_final
@@ -290,11 +312,21 @@ for batch_idx = 1:ID_p.num_batches
     ID_out.baseline = baseline;
     ID_out.truth_model = truth_model;
     ID_out.soc_0 = soc_0;
-    ID_out.V_sim_initial = V_sim_initial;
-    ID_out.V_sim_final = V_sim_final;
-    ID_out.states_initial = states_initial;
-    ID_out.states_final = states_final;
-    ID_out.sens_final = sens_final;
+    
+    ID_out.V_sim_initial_spmet = V_sim_initial_spmet;
+    ID_out.V_sim_initial_dfn = V_sim_initial_dfn;
+    ID_out.V_sim_final_dfn = V_sim_final;
+    
+    ID_out.states_initial_spmet = states_initial_spmet;
+    ID_out.states_initial_dfn = states_initial_dfn;
+    ID_out.states_final_dfn = states_final;
+    
+    ID_out.sens_initial_spmet = sens_initial_spmet;
+    ID_out.sens_initial_dfn = sens_initial_dfn;
+    ID_out.sens_final_dfn = sens_final;
+    
+    ID_out.sens_time_spmet = sens_time_spmet;
+    ID_out.sens_time_dfn = sens_time_dfn;
     
     ID_out.data = data;
     ID_out.params_final_idx = paramID_idx;
