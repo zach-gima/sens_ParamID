@@ -12,8 +12,8 @@ function [A_n,A_p,B_n,B_p,C_n,C_p,D_n,D_p,varargout] = spm_plant_obs_mats(p)
 import casadi.*
 
 % Electrochemical Model Parameters
-alpha_n = p.D_s_n / (p.R_s_n * p.delta_r_n)^2;
-alpha_p = p.D_s_p / (p.R_s_p * p.delta_r_p)^2;
+alpha_n = p.D_s_n0 / (p.R_s_n * p.delta_r_n)^2;
+alpha_p = p.D_s_p0 / (p.R_s_p * p.delta_r_p)^2;
 
 % Block matrices
 % M1_n = zeros(p.Nr-1);
@@ -70,8 +70,8 @@ N1(2,end-1) = 1;
 
 N2 = diag([-3,3]);
 
-N3_n = [0; -(2*p.delta_r_n * p.R_s_n)/(p.D_s_n)];
-N3_p = [0; -(2*p.delta_r_p * p.R_s_p)/(p.D_s_p)];
+N3_n = [0; -(2*p.delta_r_n * p.R_s_n)/(p.D_s_n0)];
+N3_p = [0; -(2*p.delta_r_p * p.R_s_p)/(p.D_s_p0)];
 
 % A,B matrices for each electrode
 % CASADI CHANGE -- \ not compatible op

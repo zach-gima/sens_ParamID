@@ -4,10 +4,13 @@ clear all
 close all
 clc
 % load necessary parameters and data
-run param/params_NCA;
+run params/params_NCA;
+
+% Add path to model of choice: SPMeT or DFN
+addpath(genpath('models/'))
 
 %%% Set Model Discretization Parameters
-p = set_discretization(p);
+p = set_discretization(p,'SPMeT');
 
 t_length = 3500;
 dt = 1;

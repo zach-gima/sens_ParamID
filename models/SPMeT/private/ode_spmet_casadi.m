@@ -49,7 +49,7 @@ function [x_dot,x_outs,L,alg_states] = ode_spmet_casadi(x,cur,p)
     c_e_bcs = p.ce.C * c_e;
 
     c_e0n = c_e_bcs(1);
-    c_ens = c_e_bcs(2);
+    c_esn = c_e_bcs(2);
     c_esp = c_e_bcs(3);
     c_e0p = c_e_bcs(4);
 
@@ -57,7 +57,7 @@ function [x_dot,x_outs,L,alg_states] = ode_spmet_casadi(x,cur,p)
     c_en = c_e(1:(p.Nxn-1));
     c_es = c_e((p.Nxn-1)+1:(p.Nxn-1)+(p.Nxs-1));
     c_ep = c_e((p.Nxn-1)+p.Nxs : end);
-    c_ex = [c_e0n; c_en; c_ens; c_es; c_esp; c_ep; c_e0p];
+    c_ex = [c_e0n; c_en; c_esn; c_es; c_esp; c_ep; c_e0p];
 
     %% Voltage output
 
@@ -137,13 +137,13 @@ function [x_dot,x_outs,L,alg_states] = ode_spmet_casadi(x,cur,p)
     % Overpotential due to electrolyte polarization
     % V_electrolytePolar = (2*p.R*T1)/(p.Faraday) * (1-p.t_plus)* ...
     %         ( (1+dfca_n) * (log(cens) - log(ce0n)) ...
-    %          +(1+dfca_s) * (log(cesp) - log(cens)) ...
+    %          +(1+dfca_es) * (log(cesp) - log(cens)) ...
     %          +(1+dfca_p) * (log(ce0p) - log(cesp)));
 
     %%%% [ZTG CHANGE] -- this form enables sensitivity to be more easily computed
     dActivity = [dfca_n; dfca_s; dfca_p]; 
     dActivity = p.ElecFactorDA*dActivity; % introduced p.ElecFactorDA to easily perturb activity coefficients
-    log_cex =  [log(c_ens) - log(c_e0n);log(c_esp) - log(c_ens); log(c_e0p) - log(c_esp)];
+    log_cex =  [log(c_esn) - log(c_e0n);log(c_esp) - log(c_esn); log(c_e0p) - log(c_esp)];
 
     V_electrolytePolar = (2*p.R*T1)/(p.Faraday) * (1-p.t_plus)*(1+dActivity)'*log_cex;
 

@@ -4,7 +4,6 @@
 function plot_sensID(metrics,results_folder,baseline,date)
 
     fs = 25;
-    run param/params_bounds
     
     %% Parse inputs
     cssn_rmse = metrics.cssn_rmse;
@@ -12,6 +11,8 @@ function plot_sensID(metrics,results_folder,baseline,date)
     etas_rmse = metrics.etas_rmse;
     ce0n_rmse = metrics.ce0n_rmse;
     ce0p_rmse = metrics.ce0p_rmse;
+    etan_rmse = metrics.etan_rmse;
+    etap_rmse = metrics.etap_rmse;
     norm_param_dist = metrics.norm_param_dist;
 %     fmincon_iter = metrics.fmincon_iter;
 %     cost_evolution = metrics.cost_evolution;
@@ -100,6 +101,21 @@ function plot_sensID(metrics,results_folder,baseline,date)
 % 
 %     savefig(strcat(plots_folder,'etas_fit.fig'))
 %     print(strcat(plots_folder,'etas_fit'),'-dpng')
+
+    %rmse
+    figure('Position', [100 100 900 700])
+    plot(theta_iter_vec,etan_rmse,'-o',theta_iter_vec,etap_rmse,'-o','MarkerSize',10,'LineWidth',3,'MarkerEdgeColor','k')
+    legend('Surface Overpotential (Anode)','Surface Overpotential (Cathode)')
+    xlabel('Batch')
+    xticks(theta_iter_vec)
+    ylabel('\eta^{\pm} RMSE (V)','Fontsize',fs);%,'Interpreter','latex')
+    title('Solid Phase Surface Overpotential')
+    set(gca,'FontSize',fs)
+    box on
+    grid on
+
+    savefig(strcat(results_folder,date,'_',baseline,'_','etanp_rmse.fig'))
+    print(strcat(results_folder,date,'_',baseline,'_','etanp_rmse'),'-dpng')
     
     %rmse
     figure('Position', [100 100 900 700])
@@ -222,4 +238,36 @@ function plot_sensID(metrics,results_folder,baseline,date)
     
     savefig(strcat(results_folder,date,'_',baseline,'_','per_param_err.fig'))
     print(strcat(results_folder,date,'_',baseline,'_','per_param_err'),'-dpng')
+    
+    
+end
+
+function plot_sens_trajectory(data,sens_initial_dfn,sens_initial_spmet)
+    fs = 35;
+    theta_char = {'R_s^+';char(954);horzcat(char(949),'_e^-');'t_+';'R_f^-';'R_f^+'};
+
+    for p_idx = 1:length(theta_char)
+        current_profile_dfn = sens_initial_dfn{1};
+        current_profile_spmet = sens_initial_spmet{1};
+    %     err = abs(current_profile_dfn(:,p_idx) - current_profile_spmet(:,p_idx));
+        figure('Position', [100 100 900 700])
+        hold on
+        plot(data(1).time, current_profile_dfn(:,p_idx)/max(current_profile_dfn(:,p_idx)),'LineWidth',2);
+        plot(data(1).time, current_profile_spmet(:,p_idx)/max(current_profile_dfn(:,p_idx)),'r','LineWidth',2);
+    %     plot(data(1).time,err/max(current_profile_dfn(:,1)),'LineWidth',2)
+        hold off
+        title(theta_char{p_idx})
+        xlabel('Time (s)')
+        ylabel('$\partial V / \partial \theta$','Interpreter','Latex')  
+        legend('DFN','SPMeT')%, '|DFN-SPMeT|');
+        set(gca,'Fontsize',fs)
+
+        box on
+        grid on
+
+        savefig(strcat('sens_trajectory',num2str(p_idx),'.fig'))
+        print(strcat('sens_trajectory',num2str(p_idx)),'-dpng')
+        
+        close
+    end
 end

@@ -26,7 +26,7 @@ searchdir = [];
 % opt sets the algorithm, "output function" this was an addition for debugging that
 %helps us look inside fmincon
 opt = optimoptions('fmincon','Display','iter','Algorithm','sqp',...
-'SpecifyObjectiveGradient',true,'Diagnostics','on','OutputFcn',@outfun);  %'CheckGradients',true,'FiniteDifferenceType','central',
+'SpecifyObjectiveGradient',true,'Diagnostics','on','ObjectiveLimit',1e-3,'FunctionTolerance',1e-4,'OutputFcn',@outfun);  %'CheckGradients',true,'FiniteDifferenceType','central',
 
 %% User Inputs
 
@@ -38,13 +38,13 @@ run params/params_bounds
 baseline = '2b'; %'2a'; %'2b' '3'
 truth_model = 'DFN'; %'SPMeT' 'Experimental'
 soc_0 = 'SOC60'; %SOC#
-perturb_factor_initial = 1.3; %1.3;
+perturb_factor_initial = 1; %1.3;
 perturb_factor_batch = 0.95; % each batch move parameters -10%
 
 %%% setup structure to hold all of param-ID related hyperparameters
 ID_p = struct(); 
 ID_p.event_budget = 3; % batch budget
-ID_p.num_batches = 1; % num batches; batches are made of events
+ID_p.num_batches = 5; % num batches; batches are made of events
 ID_p.collinearity_thresh = 0.7;
 
 %%% Set input/output paths
@@ -121,8 +121,8 @@ for batch_idx = 1:ID_p.num_batches
     p_truth = update_p_struct(p,theta_truth_current,theta(batch_idx).str);
     
     if strcmp('SPMeT',truth_model)
-        parfor mm = 1:ID_p.num_events
-            [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm));
+        for mm = 1:ID_p.num_events
+            [V_true{mm},States_true{mm}] = spmet_casadi(p_truth,data(mm),[],[]);
         end
     elseif strcmp('DFN',truth_model)
         parfor mm = 1:ID_p.num_events

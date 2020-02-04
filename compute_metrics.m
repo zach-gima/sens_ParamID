@@ -1,6 +1,4 @@
-function [metrics] = compute_metrics(num_batches,partial_path)
-    run param/params_bounds
-    run param/params_NCA
+function [metrics] = compute_metrics(p,p_bounds,model,num_batches,partial_path)
 
     rmse_vec = [];
     cost_evolution = cell(num_batches,1);
@@ -17,15 +15,16 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         cssn_final = [];
         cssp_initial = [];
         cssp_final = [];
+         
         % Side rxn overpotential
         etas_initial = [];
         etas_final = [];    
 
-        %Electrode overpotential
-        %     etan_initial = [];
-        %     etan_final = [];
-        %     etap_initial  = [];
-        %     etap_final  = [];
+        % Electrode overpotential
+        etan_initial = [];
+        etan_final = [];
+        etap_initial  = [];
+        etap_final  = [];
 
         % elyte conc. at current collectors
         ce0n_initial = [];
@@ -33,11 +32,15 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         ce0p_initial = [];
         ce0p_final = [];
 
+        %%% pre-allocate for truth data as well
         cssn_true = [];
         cssp_true = [];
-        etas_true =  [];
         ce0n_true =  [];
         ce0p_true =  [];
+        
+        etas_true =  [];
+        etan_true =  [];
+        etap_true =  [];
         
         % Load data
         full_path = strcat(partial_path,num2str(batch_idx),'.mat');
@@ -55,11 +58,11 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         data = ID_out.data;
         opt_data = data(opt_event_idx);
 
-        V_sim_initial = cell2mat(ID_out.V_sim_initial(opt_event_idx));
-        V_sim_final = cell2mat(ID_out.V_sim_final(opt_event_idx));
+        V_sim_initial = cell2mat(ID_out.V_sim_initial_dfn(opt_event_idx));
+        V_sim_final = cell2mat(ID_out.V_sim_final_dfn(opt_event_idx));
         
-        states_initial = ID_out.states_initial(opt_event_idx);
-        states_final = ID_out.states_final(opt_event_idx);
+        states_initial = ID_out.states_initial_dfn(opt_event_idx);
+        states_final = ID_out.states_final_dfn(opt_event_idx);
 
         theta = ID_out.theta;
         theta_iter_vec = 0:num_batches;
@@ -81,31 +84,34 @@ function [metrics] = compute_metrics(num_batches,partial_path)
 %             end
             t_cell{zz,1} = opt_data(zz).time + t_end;
 
-            V_true_cell{zz,1} = opt_data(zz).V_exp;
+            V_true_cell{zz,1} = opt_data(zz).V_true;
             states_true{zz,1} = opt_data(zz).states_true;
             
             % Truth Model: SPMeT
-            if isfield(states_true{zz,1},'etas_sim') % naming convention in spmet
+            if strcmp(truth_model,'SPMeT')
                 cssn_true = vertcat(cssn_true,states_true{zz,1}.cssn_sim);
                 cssp_true= vertcat(cssp_true,states_true{zz,1}.cssp_sim);
                 
-                etas_true = vertcat(etas_true,states_true{zz,1}.etas_sim);
-                
                 ce0n_true = vertcat(ce0n_true,states_true{zz,1}.ce0n_sim);
                 ce0p_true = vertcat(ce0p_true,states_true{zz,1}.ce0p_sim);
-            
+                
+                etas_true = vertcat(etas_true,states_true{zz,1}.etas_sim);
+                etan_true = vertcat(etan_true,states_true{zz,1}.etan_sim);
+                etap_true = vertcat(etap_true,states_true{zz,1}.etap_sim);
             % Truth Model: DFN
-            elseif isfield(states_true{zz,1},'etasLn_sim') % naming convention in DFN
+            elseif strcmp(truth_model,'DFN')
                 % spatial discretization different in DFN; grab c_ss bordering elyte
                 cssn_true = vertcat(cssn_true,states_true{zz,1}.cssn_sim(end,:)');
                 cssp_true= vertcat(cssp_true,states_true{zz,1}.cssp_sim(1,:)');
                 
-                etas_true = vertcat(etas_true,states_true{zz,1}.etasLn_sim');
-                
                 ce0n_true = vertcat(ce0n_true,states_true{zz,1}.ce0n_sim');
                 ce0p_true = vertcat(ce0p_true,states_true{zz,1}.ce0p_sim');
+                
+                etas_true = vertcat(etas_true,states_true{zz,1}.etas_sim');
+                etan_true = vertcat(etan_true,states_true{zz,1}.etan_sim(end,:)');
+                etap_true = vertcat(etap_true,states_true{zz,1}.etap_sim(1,:)');
             end
-
+            
             t_end = t_end + opt_data(zz).time(end);
         end
 
@@ -139,51 +145,85 @@ function [metrics] = compute_metrics(num_batches,partial_path)
         % For first batch, compute initial rmse before ID
         if batch_idx == 1
             for jj = 1:num_opt_events
-                cssn_initial = vertcat(cssn_initial,states_initial{jj}.cssn_sim);
-                cssp_initial = vertcat(cssp_initial,states_initial{jj}.cssp_sim);
-                ce0p_initial = vertcat(ce0p_initial,states_initial{jj}.ce0p_sim);
-                ce0n_initial = vertcat(ce0n_initial,states_initial{jj}.ce0n_sim);
-                etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim+0.4);
-        %         etan_initial = vertcat(etan_initial,states_initial{jj}.etan_sim);
-        %         etap_initial = vertcat(etap_initial,states_initial{jj}.etap_sim);
+                if strcmp(model,'SPMeT')
+                    cssn_initial = vertcat(cssn_initial,states_initial{jj}.cssn_sim);
+                    cssp_initial = vertcat(cssp_initial,states_initial{jj}.cssp_sim);
+                    
+                    ce0p_initial = vertcat(ce0p_initial,states_initial{jj}.ce0p_sim);
+                    ce0n_initial = vertcat(ce0n_initial,states_initial{jj}.ce0n_sim);
+                    
+                    etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim);
+%                     etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim+0.4);  % use if p.Us was set to 0.4
+                    etan_initial = vertcat(etan_initial,states_initial{jj}.etan_sim);
+                    etap_initial = vertcat(etap_initial,states_initial{jj}.etap_sim);
+                    
+                elseif strcmp(model,'DFN')
+                    cssn_initial = vertcat(cssn_initial,states_initial{jj}.cssn_sim(end,:)');
+                    cssp_initial = vertcat(cssp_initial,states_initial{jj}.cssp_sim(1,:)');
+                    
+                    ce0p_initial = vertcat(ce0p_initial,states_initial{jj}.ce0p_sim');
+                    ce0n_initial = vertcat(ce0n_initial,states_initial{jj}.ce0n_sim');
+                    
+                    etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim');
+%                     etas_initial = vertcat(etas_initial,states_initial{jj}.etas_sim+0.4); % use if p.Us was set to 0.4
+                    etan_initial = vertcat(etan_initial,states_initial{jj}.etan_sim(end,:)');
+                    etap_initial = vertcat(etap_initial,states_initial{jj}.etap_sim(1,:)');
+                end
             end
 
             cssn_rmse(1) = rmse(cssn_true,cssn_initial);
             cssp_rmse(1) = rmse(cssp_true,cssp_initial);
-            etas_rmse(1) = rmse(etas_true,etas_initial);
             ce0n_rmse(1) = rmse(ce0n_true,ce0n_initial);
             ce0p_rmse(1) = rmse(ce0p_true,ce0p_initial);
-    %       etan_rmse(1) = rmse(etan_true,etan_initial);
-    %       etap_rmse(1) = rmse(etap_true,etap_initial);
+            etas_rmse(1) = rmse(etas_true,etas_initial);
+            etan_rmse(1) = rmse(etan_true,etan_initial);
+            etap_rmse(1) = rmse(etap_true,etap_initial);
             norm_initial_param = origin_to_norm(theta.guess,p_bounds);
             norm_param_dist(1) = norm(norm_truth_param-norm_initial_param);
             per_param_norm_error{1} = (norm_truth_param-norm_initial_param)./norm_truth_param*100;
         end
 
         for jj = 1:num_opt_events
-            cssn_final = vertcat(cssn_final,states_final{jj}.cssn_sim);
-            cssp_final = vertcat(cssp_final,states_final{jj}.cssp_sim);        
-            ce0n_final = vertcat(ce0n_final,states_final{jj}.ce0n_sim);
-            ce0p_final = vertcat(ce0p_final,states_final{jj}.ce0p_sim);
-            etas_final = vertcat(etas_final,states_final{jj}.etas_sim+0.4);
-    %         etan_final = vertcat(etan_final,states_final{jj}.etan_sim);
-    %         etap_final = vertcat(etap_final,states_final{jj}.etap_sim);
+            if strcmp(model,'SPMeT')
+                cssn_final = vertcat(cssn_final,states_final{jj}.cssn_sim);
+                cssp_final = vertcat(cssp_final,states_final{jj}.cssp_sim);
+
+                ce0n_final = vertcat(ce0n_final,states_final{jj}.ce0n_sim);
+                ce0p_final = vertcat(ce0p_final,states_final{jj}.ce0p_sim);
+
+    %             etas_final = vertcat(etas_final,states_final{jj}.etas_sim+0.4); % use if p.Us was set to 0.4
+                etas_final = vertcat(etas_final,states_final{jj}.etas_sim);
+                etan_final = vertcat(etan_final,states_final{jj}.etan_sim);
+                etap_final = vertcat(etap_final,states_final{jj}.etap_sim);
+                
+            elseif strcmp(model,'DFN')
+                cssn_final = vertcat(cssn_final,states_final{jj}.cssn_sim(end,:)');
+                cssp_final = vertcat(cssp_final,states_final{jj}.cssp_sim(1,:)');
+
+                ce0n_final = vertcat(ce0n_final,states_final{jj}.ce0n_sim');
+                ce0p_final = vertcat(ce0p_final,states_final{jj}.ce0p_sim');
+
+    %             etas_final = vertcat(etas_final,states_final{jj}.etas_sim+0.4); % use if p.Us was set to 0.4
+                etas_final = vertcat(etas_final,states_final{jj}.etas_sim');
+                etan_final = vertcat(etan_final,states_final{jj}.etan_sim(end,:)');
+                etap_final = vertcat(etap_final,states_final{jj}.etap_sim(1,:)');
+            end
         end
 
         %%% css RMSE and fits
         cssn_rmse(batch_idx+1) = rmse(cssn_true,cssn_final);
         cssp_rmse(batch_idx+1) = rmse(cssp_true,cssp_final);
 
-        %%% electrode overpotential RMSE and fits    
-    %     etan_rmse(batch_idx+1) = rmse(etan_true,etan_final);
-    %     etap_rmse(batch_idx+1) = rmse(etap_true,etap_final);
+        %%% electrode concentration @ current collectors
+        ce0n_rmse(batch_idx+1) = rmse(ce0n_true,ce0n_final);
+        ce0p_rmse(batch_idx+1) = rmse(ce0p_true,ce0p_final);
 
         %%% sid rxn overpotential RMSE and fits
         etas_rmse(batch_idx+1) = rmse(etas_true,etas_final);
 
-        %%% electrode concentration @ current collectors
-        ce0n_rmse(batch_idx+1) = rmse(ce0n_true,ce0n_final);
-        ce0p_rmse(batch_idx+1) = rmse(ce0p_true,ce0p_final);
+        %%% electrode overpotential RMSE and fits    
+        etan_rmse(batch_idx+1) = rmse(etan_true,etan_final);
+        etap_rmse(batch_idx+1) = rmse(etap_true,etap_final);
 
         %% normalized parameter distance
         norm_ID_param = origin_to_norm(theta.final_ID,p_bounds);
@@ -200,6 +240,8 @@ function [metrics] = compute_metrics(num_batches,partial_path)
     disp('%%%%%%%%%%%%%%%%%%%%%%%%')
     fprintf('Final Voltage RMSE: %4.3f \n',rmse_vec(end))
     fprintf('Final eta_s RMSE: %4.3f \n',etas_rmse(end))
+    fprintf('Final eta^- RMSE: %4.3f \n',etan_rmse(end))
+    fprintf('Final eta^- RMSE: %4.3f \n',etap_rmse(end))
     fprintf('Final c_ss^+ RMSE, %% error: %4.3f, %4.3f \n',cssp_rmse(end),cssp_rmse(end) / p.c_s_p_max * 100)
     fprintf('Final c_ss^- RMSE, %% error: %4.3f, %4.3f \n',cssn_rmse(end),cssn_rmse(end) / p.c_s_n_max * 100)
     fprintf('Final c_e(0^+) RMSE, %% error: %4.3f, %4.3f \n',ce0p_rmse(end), ce0p_rmse(end) / p.c_e * 100)
@@ -222,11 +264,17 @@ function [metrics] = compute_metrics(num_batches,partial_path)
     metrics.perturb_factor_initial = perturb_factor_initial;
     metrics.perturb_factor_batch = perturb_factor_batch;
     metrics.num_batches = num_batches;
+    
     metrics.cssn_rmse = cssn_rmse;
     metrics.cssp_rmse = cssp_rmse;
-    metrics.etas_rmse = etas_rmse;
+    
     metrics.ce0n_rmse = ce0n_rmse;
     metrics.ce0p_rmse = ce0p_rmse;
+    
+    metrics.etas_rmse = etas_rmse;
+    metrics.etan_rmse = etan_rmse;
+    metrics.etap_rmse = etap_rmse;
+    
     metrics.norm_param_dist = norm_param_dist;
     metrics.fmincon_iters = fmincon_iters;
     metrics.fmincon_fcount = fmincon_fcount;

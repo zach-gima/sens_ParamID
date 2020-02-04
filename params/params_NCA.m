@@ -19,7 +19,7 @@
 %% Geometric Params
 % Thickness of each layer
 p.L_n = 79e-6;     % Thickness of negative electrode [m]
-p.L_s = 80e-6;     % Thickness of separator [m]
+p.L_s = 15e-6;     % Thickness of separator [m]
 p.L_p = 61.5e-6;     % Thickness of positive electrode [m]
 
 % L_ccn = 25e-6;    % Thickness of negative current collector [m]

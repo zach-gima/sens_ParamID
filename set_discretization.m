@@ -4,16 +4,16 @@
 function [p] = set_discretization(p, truth_model)
     if strcmp('SPMeT',truth_model)
         %%% SPMeT Specific Finite Difference Scheme
-        p.Nr = 30; % 100 Make this very large so it closely approximates the true model
+        p.Nr = 3; % 100 Make this very large so it closely approximates the true model
         p.delta_r_n = 1/p.Nr;
         p.delta_r_p = 1/p.Nr;
         p.r_vec = (0:p.delta_r_n:1)';
         %     r_vecx = r_vec(2:end-1);
 
         % Finite difference points along x-coordinate
-        p.Nxn = 10; %70; 
-        p.Nxs = 5; %35; 
-        p.Nxp = 10; %70;
+        p.Nxn = 5; %70; 
+        p.Nxs = 3; %35; 
+        p.Nxp = 5; %70;
         p.Nx = p.Nxn+p.Nxs+p.Nxp;
     %     Nx = p.Nx - 3;
     %     x_vec_spme = linspace(0,1,Nx+4);

@@ -157,6 +157,7 @@ function [v_sim,state_info,varargout] = spmet_casadi(p,data,varargin)
     %% Build function for simulated states % [SHP Change]
     f_out = Function('f_out',{theta_sx,x,u},{x_outs},{'params_sx','x','u'},{'f_out'});
     alg_out = Function('alg_out',{theta_sx,x,u},{alg_states},{'params_sx','x','u'},{'alg_out'}); % ZTG add 2019-6-17
+    C_out = Function('C_out',{},{},{},{'C_out'});
     f0 = full(f_out(theta_0,x0,0));
     a0 = full(alg_out(theta_0,x0,0));
 
